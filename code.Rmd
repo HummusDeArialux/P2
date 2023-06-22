@@ -1,0 +1,101 @@
+---
+title: "PAC 2 Regresión Lineal"
+author: "Maria Lucas"
+date: "2023-06-22"
+output: 
+  word_document:
+    toc: true
+    toc_depth: 4
+lang: Es-es
+---
+\newpage
+
+# Ejercicio 1
+
+```{r}
+# Set the file path
+file_path <- "D:/Antiguos estudios/MASTER2/Sem2/Regresion/PAC2/P2/pancreas_biomarkers.txt"
+
+# Load the data into a data frame
+data <- read.table(file_path, header = TRUE, sep = "\t")
+
+# Display the first few rows of the data frame
+head(data)
+
+# Saving variables as factors
+data$diagnosis <- factor(data$diagnosis, levels = 1:3)
+data$age_cat <- factor(data$age_cat)
+```
+
+### (a) Modelo de regresión logística
+
+#### Diagnóstico de todos los casos
+```{r}
+model <- glm(diagnosis ~ age_cat + creatinine + LYVE1 + REG1B + TFF1, data = data, family = binomial)
+
+summary(model)
+```
+
+Tal y como podemos ver en los resultados, tan solo la creatinina, la LYVE1 y el TFF1 son variables que permiten predecir el riesgo de adenocarcinoma ductal pancreático. Se puede observar porque en todas ellas el pvalor es menos a 0.01. En el contexto de regresión logística un pvalor de 0.01 permite rechazar la hipótesis nula de no relación entre la variable predictora y la variable respuesta. En otras palabras, la variable tiene un impacto significativo sobre la clase.
+
+#### Sólo adenocarcinoma y otro
+
+```{r}
+# Subset the data to include only levels 2 and 3 of the "diagnosis" variable
+subset_data <- subset(data, diagnosis != 1)
+
+# Recode values 2 and 3 to 0 and 1, respectively
+subset_data$diagnosis <- ifelse(subset_data$diagnosis == 2, 0, 1)
+
+# Fit the logistic regression model using the subsetted data
+model <- glm(diagnosis ~ age_cat + creatinine + LYVE1 + REG1B + TFF1, data = subset_data, family = binomial)
+
+# View the model summary
+summary(model)
+```
+
+Tal y como podemos ver en los resultados, la edad a partir de 56 años es un indicador significativo. La LYVE1 y el REG1B también son variables que permiten predecir el riesgo de adenocarcinoma ductal pancreático. Se puede observar porque en todas ellas el pvalor es menos a 0.05. En el contexto de regresión logística un pvalor de 0.01 permite rechazar la hipótesis nula de no relación entre la variable predictora y la variable respuesta. En otras palabras, la variable tiene un impacto significativo sobre la clase.
+
+Que el intercepto también sea significativo sugiere que parte de la variable respuesta no es explicada por las variables independientes estudiadas. En regresión logística el intercepto captura la probabilidad de ocurrencia de un suceso cuando todas las variables predictoras están en su nivel de referencia. En otras palabras, un intercepto significativo implica que aunque no tengamos ningun predictor, hay diferencias significativas entre las clases.
+
+### (b) Interpretación de coeficientes
+
+Los coeficientes en un modelo de regresión logística indican el cambio estimado en el log-odds del evento ocurriendo (codeado como 1 = adenocarcinoma ductal pancreático) asociado a una unidad de cambio en la variable predictora, sin variar el resto de variables.
+
+Un estimador positivo sugiere que el incremento de la variable está asociado a un incremento de la probabilidad (log-odds) del evento ocurriendo. Si el estimador es 0.5 significa que al aumentar en 1 el valor del predictor, esto se asopcia a un 0.5 aumento del log-odds del evento ocurriendo.
+
+Contrariamente, un estimador negativo significa que un aumento de la variable disminuye el log-odds del evento ocurriendo ()
+
+
+
+### (c) Modelo reducido
+
+### (d) Funcion cuadrática
+
+### (e) Predicción de caso
+
+# Ejercicio 2
+
+### (a) Regresión lineal
+
+### (b) Regresión lineal con AIC
+
+### (c) Regresión por componentes principales
+
+### (d) Ridge regression
+
+### (e) motor_UPDRS como respuesta
+
+### (f) Análisis de residuos
+
+# Ejercicio 3
+
+### (a) Comparación modelos con y sin puntos influyentes
+
+### (b) Cálculo del RMSE robusto
+
+### (c) LTS o Huber
+
+# ANEXO
+
+### Código
