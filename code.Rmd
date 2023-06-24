@@ -62,17 +62,119 @@ Que el intercepto también sea significativo sugiere que parte de la variable re
 
 Los coeficientes en un modelo de regresión logística indican el cambio estimado en el log-odds del evento ocurriendo (codeado como 1 = adenocarcinoma ductal pancreático) asociado a una unidad de cambio en la variable predictora, sin variar el resto de variables.
 
-Un estimador positivo sugiere que el incremento de la variable está asociado a un incremento de la probabilidad (log-odds) del evento ocurriendo. Si el estimador es 0.5 significa que al aumentar en 1 el valor del predictor, esto se asopcia a un 0.5 aumento del log-odds del evento ocurriendo.
+Un estimador positivo sugiere que el incremento de la variable está asociado a un incremento de la probabilidad (log-odds) del evento ocurriendo. Si el estimador es 0.5 significa que al aumentar en 1 el valor del predictor, esto se asopcia a un 0.5 aumento del log-odds del evento ocurriendo. Este es el caso del LYVE1, al aumentar LYVE1 es más probable tener adenocarcinoma (3.140e-01 = 0.3140). Lo mismo sucede con la edad, parece ser que tener más de 56 años aumenta el log-odds de tener adenocacinoma. Lo hace de forma distinta dependiendo del rango de edad, de 56-65 (3.032e+00 = 3.032), de 66-75 (2.700e+00 = 2.700) y a partir de 75 años (3.443e+00 = 3.443).
 
-Contrariamente, un estimador negativo significa que un aumento de la variable disminuye el log-odds del evento ocurriendo ()
-
-
+Contrariamente, un estimador negativo significa que un aumento de la variable disminuye el log-odds del evento ocurriendo (tener adenocarcinoma).
 
 ### (c) Modelo reducido
 
+Para comparar ambos modelos podemos realizar un anova aplicando el test Chi cuadrado. Con esto estamos comparando el ajuste del modelo bajo las siguientes hipótesis:
+
+- **H0:** Desviación del modelo reducido = Desviación del modelo completo. No hay diferencia de ajuste entre los modelos.
+- **H1:** Desviación del modelo reducido > Desviación del modelo completo. El modelo reducido se ajusta peor que el modelo completo.
+
+La desviación del modelo se refiere a la diferencia entre los valores reales de los datos y los valores predichos por el modelo.
+
+```{r}
+# Fit the logistic regression model using the subsetted data
+model_simple <- glm(diagnosis ~ age_cat + LYVE1 + REG1B, data = subset_data, family = binomial)
+
+summary(model_simple)
+
+# Compare the two models
+anova(model, model_simple, test = "Chi")
+
+# Install and load the "lmtest" package
+# install.packages("lmtest")
+library(lmtest)
+
+# Perform the likelihood ratio test
+lrtest(model, model_simple)
+
+```
+
+Dado que el pvalor no es significativo (0.31) aceptamos la hipótesis nula, el modelo reducido (sin creatinina y sin TFF1) es igual de bueno que el complejo. Adicionalmente, vemos que el AIC del modelo reducido es 2 unidades menor que el del modelo complejo, esto sugiere que el modelo reducido tiene un ajuste mejor teniendo en cuenta la complejidad de ambos modelos.
+
 ### (d) Funcion cuadrática
 
+```{r}
+# Cuadratic LYVE1
+model_simple_LYVE1 = glm(diagnosis ~ age_cat + LYVE1 + I(LYVE1^2) + REG1B, data = subset_data, family = binomial)
+
+summary(model_simple_LYVE1)
+
+# Compare the two models
+anova(model_simple, model_simple_LYVE1, test = "Chi")
+
+# Cuadratic REG1B
+model_simple_REG1B = glm(diagnosis ~ age_cat + LYVE1 + REG1B + I(REG1B^2), data = subset_data, family = binomial)
+
+summary(model_simple_REG1B)
+
+# Compare the two models
+anova(model_simple, model_simple_REG1B, test = "Chi")
+
+```
+
+En ninguno de los dos casos añadir el término cuadrático ha mejorado el ajuste del modelo. Siguiendo la explicación del apartado anterior: pv = 0.3 y 0.4, aceptamos H0 los dos modelos tienen el mismo ajuste.
+
+Adicionalmente, si examinamos el AIC veremos que en los modelos con el término cuadrático este es superior. Un valor mayor AIC sugiere que el modelo no se ajusta mejor para la complejidad que presenta.
+
+En conclusión, no deberíamos incluir ninguno de los dos términos cuadráticos. Es importante comentar que, aunque estos tests aparezcan no-significativos, hay que valorarlos siempre junto con el contexto del análisis. En este caso, se ha realizado adicionalmente una inspección visual de la variable vs el log odds de la variable respuesta (disponible en el ANEXO). Estos gráficos nos confirman que efectivamente, existe una relación lineal, dado que se observa un patrón lineal sin observar otros patrones como curvas, forma de U, etc.
+
+```{r}
+# Obtain predicted log odds from the model
+predicted_logodds <- predict(model_simple, type = "link")
+
+plot(subset_data$LYVE1, predicted_logodds, xlab = "age_cat", ylab = "Log Odds", main = "Scatter plot - LYVE1 vs. Log Odds")
+
+plot(subset_data$REG1B, predicted_logodds, xlab = "age_cat", ylab = "Log Odds", main = "Scatter plot - REG1B vs. Log Odds")
+```
+
 ### (e) Predicción de caso
+
+```{r}
+# Create a new data frame for the new case
+new_case = data.frame(age_cat = "66-75", LYVE1 = 6, REG1B = 140)
+
+# Predict the outcome using the model
+prediction = predict(model_simple, newdata = new_case, type = "response")
+
+print(prediction)
+```
+El modelo predice la presencia de adenocarcinoma ductal pancreático con un 72,42% de probabilidad. Recordemos que los valores fueron recodificados a 0 = afecciones pancreáticas no cancerosas y 1 = adenocarcinoma ductal pancreático.
+
+La extrapolación ocurre cuando se hacen predicciones de para datos de la variable predictora fuera del rango de los datos usados para contruir el modelo.
+
+```{r}
+# Check predictor variable ranges
+range_data <- sapply(subset_data[, c("LYVE1", "REG1B")], range)
+range_new_observation <- c(6, 140)  # Replace with the values of the new observation
+
+# Compare new observation values with observed range
+is_extrapolation <- any(range_new_observation < range_data[1, ] | range_new_observation > range_data[2, ])
+
+# Print results
+cat("Extrapolation:", is_extrapolation, "\n")
+
+# Assess distribution of predictor variables
+# LYVE1
+hist(subset_data$LYVE1, main = "Distribution of LYVE1")
+# Add new observation to LYVE1 plot
+points(6, 0, col = "red", pch = 16)
+
+# REGB1
+hist(subset_data$REG1B, main = "Distribution of REG1B")
+# Add new observation to REGB1 plot
+points(140, 0, col = "red", pch = 16)
+
+# age_cat
+barplot(table(subset_data$age_cat), main = "Distribution of age_cat", xlab = "age_cat", ylab = "Frequency")
+# Add new observation to age_cat plot
+points(5.5, 0, col = "red", pch = 16)
+```
+
+Como podemos ver, los valores del caso a predecir se encuentra entre el rango utilizado para contruir el modelo.
 
 # Ejercicio 2
 
