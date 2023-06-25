@@ -300,12 +300,127 @@ print(results_table)
 cat("Variables usadas en el modelo: ")
 cat(variables, sep=", ")
 ```
+Removing a variable solely based on its lack of significance may affect the overall fit of the model and the relationships between other variables. A variable that is not individually significant may contribute to the model's overall predictive power when combined with other variables or interacted with other predictors. Therefore, it's crucial to assess the model's overall performance, such as through measures like R-squared or adjusted R-squared, and consider the context and theoretical significance of the variables
+
+The significance of a variable can be influenced by multicollinearity, which occurs when predictor variables are highly correlated with each other. In the presence of multicollinearity, the individual coefficients and their significance can be unstable or misleading. It's important to check for multicollinearity among the variables and consider its potential impact on the significance of individual predictors.
+
+In this example, model_linear is the initial linear regression model you built using all the variables of interest. The stepAIC() function from the MASS package is used to perform the stepwise variable selection based on AIC.
+
+The direction argument specifies the direction of the stepwise procedure. "both" allows variables to be added or removed from the model. Other options include "backward" for variable removal only and "forward" for variable addition only.
 
 ### (c) Regresión por componentes principales
 
+Performing regression using principal components involves transforming the predictor variables into a set of principal components and then using these components as predictors in the regression model.
 
+```{r}
+# Select predictor variables
+predictor_vars = train_data[7:22]
+
+# Initialize variables for best model
+best_rmse <- Inf
+best_components <- 0
+best_model <- NULL
+
+# Perform principal component analysis (PCA) on the predictor variables
+pca <- prcomp(predictor_vars, scale = TRUE)
+
+# Extract the principal components
+pcs <- pca$x
+
+# Identify the number of components with minimum RMSE
+num_components <- 1:ncol(pcs)
+rmse_values <- numeric(length(num_components))
+
+for (i in num_components) {
+  # Select the first i principal components
+  pcs_selected <- pcs[, 1:i]
+  
+  # Create a regression model using the selected components
+  model_pca <- lm(total_UPDRS ~ pcs_selected, data = train_data)
+  
+  # Predict on the test data using the model
+  predictions <- predict(model_pca, test_data)
+  
+  # Calculate residuals
+  residuals <- test_data$total_UPDRS - predictions
+  
+  # Calculate RMSE
+  rmse_values[i] <- sqrt(mean(residuals^2))
+  
+  # Check if current model has lower RMSE
+  if (rmse_values[i] < best_rmse) {
+    best_rmse <- rmse_values[i]
+    best_components <- i
+    best_model <- model_pca
+  }
+}
+
+# Plot the RMSE values against the number of components
+plot(num_components, rmse_values, type = "b", xlab = "Number of Components", ylab = "RMSE")
+
+# Identify the number of components with the minimum RMSE
+min_rmse <- min(rmse_values)
+optimal_components <- num_components[which.min(rmse_values)]
+
+# Print the results
+print(paste("Minimum RMSE:", min_rmse))
+print(paste("Optimal Number of Components:", optimal_components))
+```
+The code performs principal component analysis (PCA) on the predictor variables using the prcomp() function. The resulting principal components (pcs) are then used to construct regression models with different numbers of components (ranging from 1 to the total number of components).
+
+For each model, the code predicts the outcome variable on the test data, calculates the residuals, and computes the root mean squared error (RMSE). The RMSE values are stored in the rmse_values vector.
+
+The code then plots the RMSE values against the number of components to visualize the relationship. The number of components that yields the minimum RMSE is identified, and the corresponding results are printed.
+
+Yes, in general, a lower RMSE indicates a better-fitting model. RMSE (Root Mean Squared Error) is a commonly used measure of the average prediction error of a regression model. It represents the square root of the average squared differences between the predicted values and the actual values of the outcome variable.
+
+Since RMSE measures the magnitude of the prediction errors, a smaller RMSE implies that the model's predictions are, on average, closer to the actual values. 
+
+```{r}
+# Predict on the training data using the model
+predictions_train <- predict(model_pca, train_data)
+  
+# Predict on the test data using the model
+predictions_test <- predict(model_pca, test_data)
+  
+# Calculate residuals for training and test data
+residuals_train <- train_data$total_UPDRS - predictions_train
+residuals_test <- test_data$total_UPDRS - predictions_test
+  
+# Calculate R-squared for training data
+R_squared_train <- summary(model_pca)$r.squared
+  
+# Calculate adjusted R-squared for training data
+num_predictors <- length(coefficients(model_pca)) - 1
+n <- nrow(train_data)
+adjusted_R_squared_train <- 1 - (1 - R_squared_train) * ((n - 1) / (n - num_predictors - 1))
+  
+# Calculate RMSE for training data
+RMSE_train <- sqrt(mean(residuals_train^2))
+  
+# Calculate RMSE for test data
+RMSE_test <- sqrt(mean(residuals_test^2))
+
+# Extract the variable names from the linear regression model
+variables <- names(coef(best_model))[-1]
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
+  Value = c(length(variables), R_squared_train, adjusted_R_squared_train, RMSE_train, RMSE_test)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
+```
+
+Nota: el mejor modelo según el RMSE test no el train.
 
 ### (d) Ridge regression
+
+
 
 ### (e) motor_UPDRS como respuesta
 
