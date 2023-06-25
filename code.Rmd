@@ -174,15 +174,136 @@ barplot(table(subset_data$age_cat), main = "Distribution of age_cat", xlab = "ag
 points(5.5, 0, col = "red", pch = 16)
 ```
 
-Como podemos ver, los valores del caso a predecir se encuentra entre el rango utilizado para contruir el modelo.
+Como podemos ver, los valores del caso a predecir se encuentra entre el rango utilizado para construir el modelo.
 
 # Ejercicio 2
 
+```{r}
+set.seed(123)
+
+# Data import
+# Note: I changed the variable names to avoid problems
+
+import.data <-
+"http://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/telemonitoring/parkinsons_updrs.data"
+parkinson <- read.table(url(import.data), sep=",", skip=1)
+names(parkinson) <- c("subject#","age","sex","test_time","motor_UPDRS","total_UPDRS",
+"Jitter_p","Jitter_Abs","Jitter_RAP","Jitter_PPQ5","Jitter_DDP",
+"Shimmer","Shimmer_dB","Shimmer_APQ3","Shimmer_APQ5","Shimmer_APQ11", "Shimmer_DDA","NHR","HNR","RPDE","DFA","PPE")
+
+# install.packages('caTools')
+library(caTools)
+
+# Split the data into training and testing sets
+split = sample.split(parkinson, SplitRatio = 0.8)
+train_data = parkinson[split, ]
+test_data = parkinson[!split, ]
+```
+
 ### (a) Regresión lineal
+
+Al no utilizar el factor "sujeto" no tenemos en cuenta las posibles variaciones de cada individuo. Las muestras deberían ser apareadas, ya que se ace un seguimiento a lo largo del tiempo. Una estimación. No sé lo que digo ya lo mirare.
+
+```{r}
+# Fit the model
+model_lineal = lm(total_UPDRS ~ Jitter_p + Jitter_Abs + Jitter_RAP + Jitter_PPQ5 + Jitter_DDP + Shimmer + Shimmer_dB + Shimmer_APQ3 + Shimmer_APQ5 + Shimmer_APQ11 + Shimmer_DDA + NHR + HNR + RPDE + DFA + PPE, data = train_data)
+
+# Extract R-squared
+r_squared = summary(model_lineal)$r.squared
+
+# Extract adjusted R-squared
+adj_r_squared = summary(model_lineal)$adj.r.squared
+
+# Predict on the training data
+predictions_train = predict(model_lineal, train_data)
+
+# Calculate residuals
+residuals_train = train_data$total_UPDRS - predictions_train
+
+# Calculate RMSE
+rmse_train = sqrt(mean(residuals_train^2))
+
+# Predict on the test data
+predictions_test <- predict(model_lineal, test_data)
+
+# Calculate residuals
+residuals_test <- test_data$total_UPDRS - predictions_test
+
+# Calculate RMSE
+rmse_test <- sqrt(mean(residuals_test^2))
+
+# Extract the variable names from the linear regression model
+variables <- names(coef(model_lineal))[-1]
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
+  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
+
+```
+
+Al no considerar el "sujeto" se viola la suposición de independencia. En este tipo de modelos, se asume que todas las observaciones son independientes. Al no serlo, se construirá un modelo que incluirá métricas erróneas. De manera similar, se pierde precisión al no tener en cuenta la correlación entre los datos. El error estándar de los coeficientes estimados puede subestimarse, dando intervalos de confianza más estrechos.
+
+Adicionalmente, se aumenta el error de Tipo 1 (rechazar incorrectamente H0 haciendo que una variable sea significativa cuando no lo es). Esto sucede porque los datos de un mismo individuo tienden a ser más similares, inflando así la significación de los resultados. 
+
+Finalmente, se hace más complicado detectar las variaciones entre en un mismo individuo. 
 
 ### (b) Regresión lineal con AIC
 
+```{r}
+library(MASS)
+
+# Perform stepwise variable selection based on AIC
+model_stepwise <- stepAIC(model_lineal, direction = "both", trace = FALSE)
+
+# Extract R-squared
+r_squared = summary(model_stepwise)$r.squared
+
+# Extract adjusted R-squared
+adj_r_squared = summary(model_stepwise)$adj.r.squared
+
+# Predict on the training data
+predictions_train = predict(model_stepwise, train_data)
+
+# Calculate residuals
+residuals_train = train_data$total_UPDRS - predictions_train
+
+# Calculate RMSE
+rmse_train = sqrt(mean(residuals_train^2))
+
+# Predict on the test data
+predictions_test <- predict(model_stepwise, test_data)
+
+# Calculate residuals
+residuals_test <- test_data$total_UPDRS - predictions_test
+
+# Calculate RMSE
+rmse_test <- sqrt(mean(residuals_test^2))
+
+# Extract the variable names from the linear regression model
+variables <- names(coef(model_stepwise))[-1]
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
+  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
+```
+
 ### (c) Regresión por componentes principales
+
+
 
 ### (d) Ridge regression
 
