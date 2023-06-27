@@ -13,6 +13,9 @@ lang: Es-es
 # Ejercicio 1
 
 ```{r}
+# Set viasulization number
+options(scipen = 999)
+
 # Set the file path
 file_path <- "D:/Antiguos estudios/MASTER2/Sem2/Regresion/PAC2/P2/pancreas_biomarkers.txt"
 
@@ -62,7 +65,7 @@ Que el intercepto también sea significativo sugiere que parte de la variable re
 
 Los coeficientes en un modelo de regresión logística indican el cambio estimado en el log-odds del evento ocurriendo (codeado como 1 = adenocarcinoma ductal pancreático) asociado a una unidad de cambio en la variable predictora, sin variar el resto de variables.
 
-Un estimador positivo sugiere que el incremento de la variable está asociado a un incremento de la probabilidad (log-odds) del evento ocurriendo. Si el estimador es 0.5 significa que al aumentar en 1 el valor del predictor, esto se asopcia a un 0.5 aumento del log-odds del evento ocurriendo. Este es el caso del LYVE1, al aumentar LYVE1 es más probable tener adenocarcinoma (3.140e-01 = 0.3140). Lo mismo sucede con la edad, parece ser que tener más de 56 años aumenta el log-odds de tener adenocacinoma. Lo hace de forma distinta dependiendo del rango de edad, de 56-65 (3.032e+00 = 3.032), de 66-75 (2.700e+00 = 2.700) y a partir de 75 años (3.443e+00 = 3.443).
+Un estimador positivo sugiere que el incremento de la variable está asociado a un incremento de la probabilidad (log-odds) del evento ocurriendo. Si el estimador es 0.5 significa que al aumentar en 1 el valor del predictor, esto se asopcia a un 0.5 aumento del log-odds del evento ocurriendo. Este es el caso del LYVE1, al aumentar LYVE1 es más probable tener adenocarcinoma (0.3140). Lo mismo sucede con la edad, parece ser que tener más de 56 años aumenta el log-odds de tener adenocacinoma. Lo hace de forma distinta dependiendo del rango de edad, de 56-65 (3.032), de 66-75 (2.7) y a partir de 75 años (3.443).
 
 Contrariamente, un estimador negativo significa que un aumento de la variable disminuye el log-odds del evento ocurriendo (tener adenocarcinoma).
 
@@ -182,7 +185,7 @@ Como podemos ver, los valores del caso a predecir se encuentra entre el rango ut
 set.seed(123)
 
 # Data import
-# Note: I changed the variable names to avoid problems
+# Note: I changed the variable names to avoid problems with symbols
 
 import.data <-
 "http://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/telemonitoring/parkinsons_updrs.data"
@@ -230,7 +233,25 @@ predictions_test <- predict(model_lineal, test_data)
 residuals_test <- test_data$total_UPDRS - predictions_test
 
 # Calculate RMSE
-rmse_test <- sqrt(mean(residuals_test^2))
+rmse_test_lineal <- sqrt(mean(residuals_test^2))
+
+# Number of observations to trim
+n_trim <- round(0.1 * length(residuals_test))
+
+# Sort the residuals in ascending order
+sorted_residuals_test <- sort(residuals_test)
+
+# Trim the specified percentage of observations from both ends
+trimmed_residuals_test <- sorted_residuals_test[(n_trim + 1):(length(residuals_test) - n_trim)]
+
+# Calculate the trimmed mean of the residuals
+trimmed_mean_test <- mean(trimmed_residuals_test)
+
+# Calculate the squared residuals using the trimmed mean:
+trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
+
+# Calculate the robust RMSE using the trimmed mean:
+robust_rmse_lineal <- sqrt(mean(trimmed_squared_residuals_test))
 
 # Extract the variable names from the linear regression model
 variables <- names(coef(model_lineal))[-1]
@@ -238,14 +259,13 @@ variables <- names(coef(model_lineal))[-1]
 # Create a data frame for the results
 results_table <- data.frame(
   Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
-  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test)
+  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test_lineal)
 )
 
 # Print the result table
 print(results_table)
 cat("Variables usadas en el modelo: ")
 cat(variables, sep=", ")
-
 ```
 
 Al no considerar el "sujeto" se viola la suposición de independencia. En este tipo de modelos, se asume que todas las observaciones son independientes. Al no serlo, se construirá un modelo que incluirá métricas erróneas. De manera similar, se pierde precisión al no tener en cuenta la correlación entre los datos. El error estándar de los coeficientes estimados puede subestimarse, dando intervalos de confianza más estrechos.
@@ -284,7 +304,7 @@ predictions_test <- predict(model_stepwise, test_data)
 residuals_test <- test_data$total_UPDRS - predictions_test
 
 # Calculate RMSE
-rmse_test <- sqrt(mean(residuals_test^2))
+rmse_test_AIC <- sqrt(mean(residuals_test^2))
 
 # Extract the variable names from the linear regression model
 variables <- names(coef(model_stepwise))[-1]
@@ -292,7 +312,7 @@ variables <- names(coef(model_stepwise))[-1]
 # Create a data frame for the results
 results_table <- data.frame(
   Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
-  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test)
+  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test_AIC)
 )
 
 # Print the result table
@@ -420,17 +440,258 @@ Nota: el mejor modelo según el RMSE test no el train.
 
 ### (d) Ridge regression
 
+Ridge regression is a model tuning method that is used to analyse any data that suffers from multicollinearity. This method performs L2 regularization. When the issue of multicollinearity occurs, least-squares are unbiased, and variances are large, this results in predicted values being far away from the actual values.
 
+Yes, you can adjust the model using Ridge regression. Ridge regression is a regularization technique that introduces a penalty term to the least squares objective function, helping to reduce the impact of multicollinearity and potentially improve the model's performance.
+
+```{r}
+# install.packages('glmnet')
+library(glmnet)
+
+# Select predictor variables as matrix
+x_train = data.matrix(train_data[7:22])
+y_train = train_data$total_UPDRS
+
+x_test = data.matrix(test_data[7:22])
+y_test = test_data$total_UPDRS
+
+# Fit model
+ridge_model = glmnet(x_train, y_train, alpha = 0, lambda = 1)
+
+# Make predictions
+predictions_train <- predict(ridge_model, newx = x_train)
+predictions_test <- predict(ridge_model, newx = x_test)
+
+# R squared
+SSR <- sum((predictions_train - y_train)^2)  # Sum of Squares of Residuals
+SST <- sum((y_train - mean(y_train))^2)  # Total Sum of Squares
+r_squared <- 1 - (SSR / SST)
+
+# Adjusted R squared
+n <- length(y_train)  # Number of observations
+p <- ncol(x_train)  # Number of predictors (excluding intercept)
+adj_r_squared <- 1 - (1 - r_squared) * ((n - 1) / (n - p - 1))
+
+# RMSE_train
+rmse_train <- sqrt(mean((predictions_train - y_train)^2))
+
+# RMSE_test
+rmse_test_ridge <- sqrt(mean((predictions_test - y_test)^2))
+
+# Extract the coefficients
+coefficients <- coef(ridge_model)
+
+# Extract the variable names
+variables <- colnames(x_train)
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
+  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test_ridge)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
+```
+alpha = 0 specifies Ridge regression (since alpha = 0 represents the L2 penalty), and lambda = 1 controls the amount of regularization. You can adjust the value of lambda to control the amount of shrinkage applied to the coefficients.
 
 ### (e) motor_UPDRS como respuesta
 
+A value of "0.1" for both R2 and R2 adjusted means that the predictors included in the model explain approximately 10% of the variance in the dependent variable. This indicates a relatively weak relationship between the predictors and the response variable. Keep in mind that the interpretation of the R2 and R2 adjusted values depends on the specific context and the nature of the data being modeled.
+
+Yo diria que si porque es puta mierda. No cumpliria el objetivo principal: El principal objetivo es predecir el UPDRS total a partir de las 16 medidas de voz. Pero esque este tampoco lo hace porque es basssurrra.
+
 ### (f) Análisis de residuos
+
+In statistics, ordinary least squares (OLS) is a type of linear least squares method for choosing the unknown parameters in a linear regression model (with fixed level-one effects of a linear function of a set of explanatory variables) by the principle of least squares: minimizing the sum of the squares of the differences between the observed dependent variable (values of the variable being observed) in the input dataset and the output of the (linear) function of the independent variable. 
+
+```{r}
+# Residual plot
+plot(model_lineal, which = 1)
+
+# Normal Q-Q plot
+plot(model_lineal, which = 2)
+
+# Scale-location plot (square root of standardized residuals)
+plot(model_lineal, which = 3)
+
+# Cook's distance
+plot(model_lineal, which = 4)
+
+# Residuals vs. fitted values plot
+plot(model_lineal, which = 5)
+
+```
+    which = 1: Residuals vs. Fitted: Alrededor de 0, mas o menos lineal
+    which = 2: Normal Q-Q plot: No son muy normal en linea recta
+    which = 3: Scale-Location plot: homocedasticidad mas o menos, no es cono
+    which = 4: Cook's distance plot: NO Hay puntos influyentes. Más grande cook más influye. Más 1 es influyente
+    which = 5: Residuals vs. Leverage plot: No Existen puntos influyentes
+
+Multicollinearity refers to a situation where independent variables in a regression model are highly correlated with each other. It can cause issues in the interpretation of coefficients and affect the stability and reliability of the regression model. To study multicollinearity in R, you can use the following approaches:
+
+```{r}
+cor_matrix <- cor(train_data[, c("Jitter_p","Jitter_Abs","Jitter_RAP","Jitter_PPQ5","Jitter_DDP",
+"Shimmer","Shimmer_dB","Shimmer_APQ3","Shimmer_APQ5","Shimmer_APQ11", "Shimmer_DDA","NHR","HNR","RPDE","DFA","PPE")])
+
+# install.packages("corrplot")
+library(corrplot)
+corrplot(cor_matrix, method = "color")
+
+library(car)
+vif_values <- vif(model_lineal)
+
+tolerance_values <- 1/vif_values
+
+# Extract the variable names from the linear regression model
+variables <- names(coef(model_lineal))[-1]
+
+# Create a data frame for the results
+results_cor <- data.frame(
+  VIF = vif_values,
+  Tolerance = tolerance_values
+)
+
+print(results_cor)
+```
+
+Todos los tipos de Jitter están muy relacionados con todos los tipos de Jitter y los Shimmer con los Shimmer.Osea mucho kek. Normal que el modelo se una basurrra.
+
+Tolerance is the reciprocal of the VIF. It indicates the proportion of variance in an independent variable that is not explained by other independent variables. Variables with low tolerance values (close to 0) indicate high multicollinearity.
+
+The VIF measures how much the variance of the estimated regression coefficient is inflated due to multicollinearity.
 
 # Ejercicio 3
 
 ### (a) Comparación modelos con y sin puntos influyentes
 
+```{r}
+# Calculate cooks distance
+cooksd <- cooks.distance(model_lineal)
+
+# Get 3 most influential points
+top3_indices <- order(cooksd, decreasing = TRUE)[1:3]
+
+# Remove the points
+clean_train_data <- train_data[-top3_indices, ]
+
+# Fit new model and calculate RMSE
+
+# Lineal
+# Fit the model
+clean_model_lineal = lm(total_UPDRS ~ Jitter_p + Jitter_Abs + Jitter_RAP + Jitter_PPQ5 + Jitter_DDP + Shimmer + Shimmer_dB + Shimmer_APQ3 + Shimmer_APQ5 + Shimmer_APQ11 + Shimmer_DDA + NHR + HNR + RPDE + DFA + PPE, data = clean_train_data)
+# Predict on the test data
+predictions_test <- predict(clean_model_lineal, test_data)
+# Calculate residuals
+residuals_test <- test_data$total_UPDRS - predictions_test
+# Calculate RMSE
+rmse_clean_model_lineal <- sqrt(mean(residuals_test^2))
+
+# Step
+library(MASS)
+# Perform stepwise variable selection based on AIC
+clean_model_stepwise <- stepAIC(clean_model_lineal, direction = "both", trace = FALSE)
+# Predict on the test data
+predictions_test <- predict(clean_model_stepwise, test_data)
+# Calculate residuals
+residuals_test <- test_data$total_UPDRS - predictions_test
+# Calculate RMSE
+rmse_clean_model_step <- sqrt(mean(residuals_test^2))
+
+# PCA
+# Select predictor variables
+predictor_vars = clean_train_data[7:22]
+# Initialize variables for best model
+clean_best_rmse <- Inf
+clean_best_components <- 0
+clean_best_model <- NULL
+# Perform principal component analysis (PCA) on the predictor variables
+pca <- prcomp(predictor_vars, scale = TRUE)
+# Extract the principal components
+pcs <- pca$x
+# Identify the number of components with minimum RMSE
+num_components <- 1:ncol(pcs)
+rmse_values <- numeric(length(num_components))
+for (i in num_components) {
+  # Select the first i principal components
+  pcs_selected <- pcs[, 1:i]
+  
+  # Create a regression model using the selected components
+  model_pca <- lm(total_UPDRS ~ pcs_selected, data = clean_train_data)
+  
+  # Predict on the test data using the model
+  predictions <- predict(model_pca, test_data)
+  
+  # Calculate residuals
+  residuals <- test_data$total_UPDRS - predictions
+  
+  # Calculate RMSE
+  rmse_values[i] <- sqrt(mean(residuals^2))
+  
+  # Check if current model has lower RMSE
+  if (rmse_values[i] < best_rmse) {
+    clean_best_rmse <- rmse_values[i]
+    clean_best_components <- i
+    clean_best_model <- model_pca
+  }
+}
+
+# Ridge
+# install.packages('glmnet')
+library(glmnet)
+# Select predictor variables as matrix
+x_train = data.matrix(clean_train_data[7:22])
+y_train = clean_train_data$total_UPDRS
+x_test = data.matrix(test_data[7:22])
+y_test = test_data$total_UPDRS
+# Fit model
+clean_ridge_model = glmnet(x_train, y_train, alpha = 0, lambda = 1)
+# Make predictions
+predictions_test <- predict(clean_ridge_model, newx = x_test)
+# RMSE_test
+cleanm_ridge_rmse <- sqrt(mean((predictions_test - y_test)^2))
+# Extract the coefficients
+coefficients <- coef(clean_ridge_model)
+```
+```{r}
+# Create a data frame for the results
+results <- data.frame(
+  Modelo = c("OLS", "AIC", "RCP", "Ridge"),
+  RMSE_Con = c(rmse_test_lineal, rmse_test_AIC, best_rmse, rmse_test_ridge),
+  RMSE_Sin = c(rmse_clean_model_lineal, rmse_clean_model_step, clean_best_rmse, cleanm_ridge_rmse)
+)
+
+print(results)
+```
+
+```{r}
+# Checking if the points were correctly deleted
+# Re-calculate cooks distance
+cooksd_updated <- cooks.distance(clean_model_lineal)
+
+# Plot both
+plot(cooksd_updated, pch = 20, cex = 1.5, main = "Cook's Distance Plot")
+plot(cooksd, pch = 20, cex = 1.5, main = "Cook's Distance Plot")
+```
+
 ### (b) Cálculo del RMSE robusto
+
+The trimmed mean is less sensitive to outliers and can provide a more robust estimate of the central tendency.
+
+```{r}
+# Create a data frame for the results
+results2 <- data.frame(
+  Modelo = c("OLS", "AIC", "RCP", "Ridge"),
+  RMSE_Con = c(rmse_test_lineal, rmse_test_AIC, best_rmse, rmse_test_ridge),
+  RMSE_Sin = c(rmse_clean_model_lineal, rmse_clean_model_step, clean_best_rmse, cleanm_ridge_rmse),
+  Robusto_Con = c(robust_rmse_lineal, ) ,
+  Robusto_Sin = ,
+)
+
+print(results2)
+```
 
 ### (c) LTS o Huber
 
