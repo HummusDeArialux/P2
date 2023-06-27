@@ -232,9 +232,24 @@ residuals_train = train_data$total_UPDRS - predictions_train
 residuals_test <- test_data$total_UPDRS - predictions_test
 
 # Calculate RMSE train
-rmse_train = sqrt(mean(residuals_train^2))
+lineal_rmse_train = sqrt(mean(residuals_train^2))
 # Calculate RMSE test
-rmse_test_lineal <- sqrt(mean(residuals_test^2))
+lineal_rmse_test <- sqrt(mean(residuals_test^2))
+
+# Create results table
+# Extract the variable names from the linear regression model
+variables <- names(coef(model_lineal))[-1]
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
+  Value = c(length(variables), r_squared, adj_r_squared, lineal_rmse_train, lineal_rmse_test)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
 
 # Robust RMSE for exercise 3
 # Number of observations to trim
@@ -248,23 +263,7 @@ trimmed_mean_test <- mean(trimmed_residuals_test)
 # Calculate the squared residuals using the trimmed mean
 trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
 # Calculate the robust RMSE using the trimmed mean
-robust_rmse_lineal <- sqrt(mean(trimmed_squared_residuals_test))
-
-# Create results table
-
-# Extract the variable names from the linear regression model
-variables <- names(coef(model_lineal))[-1]
-
-# Create a data frame for the results
-results_table <- data.frame(
-  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
-  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test_lineal)
-)
-
-# Print the result table
-print(results_table)
-cat("Variables usadas en el modelo: ")
-cat(variables, sep=", ")
+robust_lineal_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
 ```
 
 Al no considerar el "sujeto" se viola la suposición de independencia. En este tipo de modelos, se asume que todas las observaciones son independientes. Al no serlo, se construirá un modelo que incluirá métricas erróneas. De manera similar, se pierde precisión al no tener en cuenta la correlación entre los datos. El error estándar de los coeficientes estimados puede subestimarse, dando intervalos de confianza más estrechos.
@@ -300,9 +299,24 @@ residuals_train = train_data$total_UPDRS - predictions_train
 residuals_test <- test_data$total_UPDRS - predictions_test
 
 # Calculate RMSE train
-rmse_train = sqrt(mean(residuals_train^2))
+step_rmse_train = sqrt(mean(residuals_train^2))
 # Calculate RMSE test
-rmse_test_AIC <- sqrt(mean(residuals_test^2))
+step_rmse_test <- sqrt(mean(residuals_test^2))
+
+# Results
+# Extract the variable names from the linear regression model
+variables <- names(coef(model_stepwise))[-1]
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
+  Value = c(length(variables), r_squared, adj_r_squared, step_rmse_train, step_rmse_test)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
 
 # Robust RMSE
 # Number of observations to trim
@@ -316,22 +330,7 @@ trimmed_mean_test <- mean(trimmed_residuals_test)
 # Calculate the squared residuals using the trimmed mean:
 trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
 # Calculate the robust RMSE using the trimmed mean:
-robust_rmse_step <- sqrt(mean(trimmed_squared_residuals_test))
-
-# Results
-# Extract the variable names from the linear regression model
-variables <- names(coef(model_stepwise))[-1]
-
-# Create a data frame for the results
-results_table <- data.frame(
-  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
-  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test_AIC)
-)
-
-# Print the result table
-print(results_table)
-cat("Variables usadas en el modelo: ")
-cat(variables, sep=", ")
+robust_step_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
 ```
 Removing a variable solely based on its lack of significance may affect the overall fit of the model and the relationships between other variables. A variable that is not individually significant may contribute to the model's overall predictive power when combined with other variables or interacted with other predictors. Therefore, it's crucial to assess the model's overall performance, such as through measures like R-squared or adjusted R-squared, and consider the context and theoretical significance of the variables
 
@@ -355,7 +354,7 @@ PCA_model <- pcr(total_UPDRS ~ ., data = train_data, validation="CV", scale = TR
 
 # Calculate RMSE values
 mpcCV <- RMSEP(PCA_model, estimate = "CV")
-rmse_values <- mpcCV$val
+rmse_values <- round(mpcCV$val, 1) # Rounded to first decimal to account for complexity
 
 # Plot the graph
 plot(mpcCV$comp, rmse_values, type = "b", xlab = "Number of Components", ylab = "RMSE")
@@ -365,7 +364,7 @@ optimal_components <- mpcCV$comp[which.min(rmse_values)]
 points(optimal_components, min(rmse_values), col = "red", pch = 16)
 text(optimal_components, min(rmse_values), paste("Optimal:", optimal_components), pos = 3)
 ```
-Es 9 ahora jeje
+El minimo absoluto es 11 pero el minimo razonable sin hacerlo muy complejo es 8 -1 = 7
 
 In the code you provided, the line (numpredcp <- which.min(mpcCV$val)) is used to find the number of principal components that minimizes the cross-validated RMSEP (mpcCV$val). This line calculates the RMSEP for different numbers of components using cross-validation and then identifies the index of the minimum value using the which.min function.
 
@@ -382,7 +381,6 @@ Since RMSE measures the magnitude of the prediction errors, a smaller RMSE impli
 ```{r}
 # Predict on the training data using the model
 predictions_train <- predict(PCA_model, train_data, ncomp = optimal_components-1)
-
 # Predict on the test data using the model
 predictions_test <- predict(PCA_model, test_data, ncomp = optimal_components-1)
   
@@ -399,15 +397,14 @@ p_train <- optimal_components - 1  # Number of predictors (components) used
 r2_adj_train <- 1 - (1 - r2_train) * ((n_train - 1) / (n_train - p_train - 1))
   
 # Calculate RMSE for training data
-RMSE_train <- sqrt(mean(residuals_train^2))
-  
+PCA_rmse_train <- sqrt(mean(residuals_train^2))
 # Calculate RMSE for test data
-RMSE_test <- sqrt(mean(residuals_test^2))
+PCA_rmse_test <- sqrt(mean(residuals_test^2))
 
 # Create a data frame for the results
 results_table <- data.frame(
   Metric = c("Número de componentes", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
-  Value = c((optimal_components - 1), r2_train, r2_adj_train, RMSE_train, RMSE_test)
+  Value = c((optimal_components - 1), r2_train, r2_adj_train, PCA_rmse_train, PCA_rmse_test)
 )
 
 # Print the result table
@@ -415,26 +412,22 @@ print(results_table)
 cat("Variables usadas en el modelo: ")
 cat(variables, sep=", ")
 
+# Robust RMSE for ex3
 # Number of observations to trim
 n_trim_best <- round(0.1 * length(residuals_test))
-
 # Sort the residuals in ascending order
 sorted_residuals_best <- sort(residuals_test)
-
 # Trim the specified percentage of observations from both ends
 trimmed_residuals_best <- sorted_residuals_best[(n_trim_best + 1):(length(residuals_test) - n_trim_best)]
-
 # Calculate the trimmed mean of the residuals for the best model
 trimmed_mean_best <- mean(trimmed_residuals_best)
-
 # Calculate the squared residuals using the trimmed mean for the best model
 trimmed_squared_residuals_best <- (trimmed_residuals_best - trimmed_mean_best)^2
-
 # Calculate the robust RMSE using the trimmed mean for the best model
-robust_rmse_best <- sqrt(mean(trimmed_squared_residuals_best))
+robust_PCA_rmse_test <- sqrt(mean(trimmed_squared_residuals_best))
 ```
 
-Nota: el mejor modelo según el RMSE test no el train.
+Nota: el mejor modelo según el RMSEP con CV, que no se que es.
 
 ### (d) Ridge regression
 
@@ -447,7 +440,7 @@ library(MASS)
 
 set.seed(123)
 
-mr <- lm.ridge(total_UPDRS ~ Jitter_p + Jitter_Abs + Jitter_RAP + Jitter_PPQ5 + Jitter_DDP + Shimmer + Shimmer_dB + Shimmer_APQ3 + Shimmer_APQ5 + Shimmer_APQ11 + Shimmer_DDA + NHR + HNR + RPDE + DFA + PPE, data = train_data, lambda=(seq(0, 0.1, 0.001)))
+mr <- lm.ridge(total_UPDRS ~ ., data = train_data, lambda=(seq(0, 0.1, 0.001)))
 (nGCV <- which.min(mr$GCV))
 
 lGCV <- mr$lambda[nGCV]
@@ -457,36 +450,38 @@ abline(v=lGCV,col=2)
 plot(mr$lambda,mr$GCV,type="l",xlab=expression(lambda),ylab="GCV")
 abline(v=lGCV,col=2)
 
-mr <- lm.ridge(total_UPDRS ~ Jitter_p + Jitter_Abs + Jitter_RAP + Jitter_PPQ5 + Jitter_DDP + Shimmer + Shimmer_dB + Shimmer_APQ3 + Shimmer_APQ5 + Shimmer_APQ11 + Shimmer_DDA + NHR + HNR + RPDE + DFA + PPE, data = train_data, lambda=lGCV)
+mr <- lm.ridge(total_UPDRS ~ ., data = train_data, lambda=lGCV)
 ```
 
 ```{r}
-predictions_test = cbind(1,as.matrix(data_test)) %*% coef(mr)
-predictions_train = cbind(1,as.matrix(data_train)) %*% coef(mr)
+# Make predictions (no y this time)
+predictions_test = cbind(1,as.matrix(test_data[,-1])) %*% coef(mr)
+predictions_train = cbind(1,as.matrix(train_data[,-1])) %*% coef(mr)
 
-# R squared
-SSR <- sum((predictions_train - y_train)^2)  # Sum of Squares of Residuals
-SST <- sum((y_train - mean(y_train))^2)  # Total Sum of Squares
-r_squared <- 1 - (SSR / SST)
+# Calculate residuals for training and test data
+residuals_train <- train_data$total_UPDRS - predictions_train
+residuals_test <- test_data$total_UPDRS - predictions_test
 
-# Adjusted R squared
-n <- length(y_train)  # Number of observations
-p <- ncol(x_train)  # Number of predictors (excluding intercept)
-adj_r_squared <- 1 - (1 - r_squared) * ((n - 1) / (n - p - 1))
+# Calculate R-squared for training data
+r2_train <- 1 - sum(residuals_train^2) / sum((train_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
 
-# RMSE_train
-rmse_train <- sqrt(mean((predictions_train - y_train)^2))
-
-# RMSE_test
-rmse_test_ridge <- sqrt(mean((predictions_test - y_test)^2))
+# Calculate adjusted R-squared for training data
+n_train <- nrow(train_data)
+p_train <- optimal_components - 1  # Number of predictors (components) used
+r2_adj_train <- 1 - (1 - r2_train) * ((n_train - 1) / (n_train - p_train - 1))
+  
+# Calculate RMSE for training data
+ridge_rmse_train <- sqrt(mean(residuals_train^2))
+# Calculate RMSE for test data
+ridge_rmse_test <- sqrt(mean(residuals_test^2))
 
 # Extract the variable names
-variables <- colnames(x_train)
+variables <- colnames(test_data[,-1])
 
 # Create a data frame for the results
 results_table <- data.frame(
-  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
-  Value = c(length(variables), r_squared, adj_r_squared, rmse_train, rmse_test_ridge)
+  Metric = c("Número de componentes", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
+  Value = c((optimal_components - 1), r2_train, r2_adj_train, ridge_rmse_train, ridge_rmse_test)
 )
 
 # Print the result table
@@ -494,23 +489,19 @@ print(results_table)
 cat("Variables usadas en el modelo: ")
 cat(variables, sep=", ")
 
+# Robust RMSE for ex 3
 # Number of observations to trim
 n_trim <- round(0.1 * length(residuals_test))
-
 # Sort the residuals in ascending order
 sorted_residuals_test <- sort(residuals_test)
-
 # Trim the specified percentage of observations from both ends
 trimmed_residuals_test <- sorted_residuals_test[(n_trim + 1):(length(residuals_test) - n_trim)]
-
 # Calculate the trimmed mean of the residuals
 trimmed_mean_test <- mean(trimmed_residuals_test)
-
 # Calculate the squared residuals using the trimmed mean:
 trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
-
 # Calculate the robust RMSE using the trimmed mean:
-robust_rmse_ridge <- sqrt(mean(trimmed_squared_residuals_test))
+robust_ridge_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
 ```
 
 
@@ -522,8 +513,6 @@ Ridge regression is a technique used to address the issue of multicollinearity (
 Lambda plays a crucial role in ridge regression by introducing a penalty term to the loss function that the model tries to minimize. The penalty term is proportional to the square of the magnitude of the coefficients. By increasing the value of lambda, the ridge regression model imposes a stronger penalty, shrinking the coefficient estimates towards zero.
 
 By tuning the value of lambda, you can control the degree of shrinkage applied to the coefficients. A larger lambda value corresponds to stronger regularization and more pronounced shrinkage of the coefficients. Conversely, a smaller lambda value reduces the amount of shrinkage and allows the model to closely approximate the OLS estimates.
-
-
 
 ### (e) motor_UPDRS como respuesta
 
@@ -603,19 +592,52 @@ cooksd <- cooks.distance(model_lineal)
 top3_indices <- order(cooksd, decreasing = TRUE)[1:3]
 
 # Remove the points
-clean_train_data <- train_data[-top3_indices, ]
+train_data <- train_data[-top3_indices, ]
+```
 
-# Fit new model and calculate RMSE
+Re-execute everything but with clean data
 
-# Lineal
+```{r}
 # Fit the model
-clean_model_lineal = lm(total_UPDRS ~ Jitter_p + Jitter_Abs + Jitter_RAP + Jitter_PPQ5 + Jitter_DDP + Shimmer + Shimmer_dB + Shimmer_APQ3 + Shimmer_APQ5 + Shimmer_APQ11 + Shimmer_DDA + NHR + HNR + RPDE + DFA + PPE, data = clean_train_data)
+model_lineal = lm(total_UPDRS ~ ., data = train_data)
+
+# Extract R-squared
+r_squared = summary(model_lineal)$r.squared
+
+# Extract adjusted R-squared
+adj_r_squared = summary(model_lineal)$adj.r.squared
+
+# Predict on the training data
+predictions_train = predict(model_lineal, train_data)
 # Predict on the test data
-predictions_test <- predict(clean_model_lineal, test_data)
-# Calculate residuals
+predictions_test <- predict(model_lineal, test_data)
+
+# Calculate residuals train
+residuals_train = train_data$total_UPDRS - predictions_train
+# Calculate residuals test
 residuals_test <- test_data$total_UPDRS - predictions_test
-# Calculate RMSE
-rmse_clean_model_lineal <- sqrt(mean(residuals_test^2))
+
+# Calculate RMSE train
+lineal_rmse_train = sqrt(mean(residuals_train^2))
+# Calculate RMSE test
+lineal_clean_rmse_test <- sqrt(mean(residuals_test^2))
+
+# Create results table
+# Extract the variable names from the linear regression model
+variables <- names(coef(model_lineal))[-1]
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "clean_rmse_test"),
+  Value = c(length(variables), r_squared, adj_r_squared, lineal_rmse_train, lineal_clean_rmse_test)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
+
+# Robust RMSE for exercise 3
 # Number of observations to trim
 n_trim <- round(0.1 * length(residuals_test))
 # Sort the residuals in ascending order
@@ -624,21 +646,57 @@ sorted_residuals_test <- sort(residuals_test)
 trimmed_residuals_test <- sorted_residuals_test[(n_trim + 1):(length(residuals_test) - n_trim)]
 # Calculate the trimmed mean of the residuals
 trimmed_mean_test <- mean(trimmed_residuals_test)
-# Calculate the squared residuals using the trimmed mean:
+# Calculate the squared residuals using the trimmed mean
 trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
-# Calculate the robust RMSE using the trimmed mean:
-clean_robust_rmse_lineal <- sqrt(mean(trimmed_squared_residuals_test))
-
-# Step
+# Calculate the robust RMSE using the trimmed mean
+robust_lineal_clean_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
+```
+________________________________________
+```{r}
 library(MASS)
+
+set.seed(123)
+
 # Perform stepwise variable selection based on AIC
-clean_model_stepwise <- stepAIC(clean_model_lineal, direction = "both", trace = FALSE)
+model_stepwise <- stepAIC(model_lineal, direction = "both", trace = FALSE)
+
+# Extract R-squared
+r_squared = summary(model_stepwise)$r.squared
+
+# Extract adjusted R-squared
+adj_r_squared = summary(model_stepwise)$adj.r.squared
+
+# Predict on the training data
+predictions_train = predict(model_stepwise, train_data)
 # Predict on the test data
-predictions_test <- predict(clean_model_stepwise, test_data)
+predictions_test <- predict(model_stepwise, test_data)
+
+# Calculate residuals
+residuals_train = train_data$total_UPDRS - predictions_train
 # Calculate residuals
 residuals_test <- test_data$total_UPDRS - predictions_test
-# Calculate RMSE
-rmse_clean_model_step <- sqrt(mean(residuals_test^2))
+
+# Calculate RMSE train
+step_rmse_train = sqrt(mean(residuals_train^2))
+# Calculate RMSE test
+step_clean_rmse_test <- sqrt(mean(residuals_test^2))
+
+# Results
+# Extract the variable names from the linear regression model
+variables <- names(coef(model_stepwise))[-1]
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "clean_rmse_test"),
+  Value = c(length(variables), r_squared, adj_r_squared, step_rmse_train, step_clean_rmse_test)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
+
+# Robust RMSE
 # Number of observations to trim
 n_trim <- round(0.1 * length(residuals_test))
 # Sort the residuals in ascending order
@@ -650,75 +708,132 @@ trimmed_mean_test <- mean(trimmed_residuals_test)
 # Calculate the squared residuals using the trimmed mean:
 trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
 # Calculate the robust RMSE using the trimmed mean:
-clean_robust_rmse_step <- sqrt(mean(trimmed_squared_residuals_test))
+robust_step_clean_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
+```
+______________________________________________________________________
+```{r}
+# install.packages('pls')
+library(pls)
 
-# PCA
-# Select predictor variables
-predictor_vars = clean_train_data[7:22]
-# Initialize variables for best model
-clean_best_rmse <- Inf
-clean_best_components <- 0
-clean_best_model <- NULL
-# Perform principal component analysis (PCA) on the predictor variables
-pca <- prcomp(predictor_vars, scale = TRUE)
-# Extract the principal components
-pcs <- pca$x
-# Identify the number of components with minimum RMSE
-num_components <- 1:ncol(pcs)
-rmse_values <- numeric(length(num_components))
-for (i in num_components) {
-  # Select the first i principal components
-  pcs_selected <- pcs[, 1:i]
-  
-  # Create a regression model using the selected components
-  model_pca <- lm(total_UPDRS ~ pcs_selected, data = clean_train_data)
-  
-  # Predict on the test data using the model
-  predictions <- predict(model_pca, test_data)
-  
-  # Calculate residuals
-  residuals <- test_data$total_UPDRS - predictions
-  
-  # Calculate RMSE
-  rmse_values[i] <- sqrt(mean(residuals^2))
-  
-  # Check if current model has lower RMSE
-  if (rmse_values[i] < best_rmse) {
-    clean_best_rmse <- rmse_values[i]
-    clean_best_components <- i
-    clean_best_model <- model_pca
-  }
-}
+set.seed(123)
 
+PCA_model <- pcr(total_UPDRS ~ ., data = train_data, validation="CV", scale = TRUE)
+
+# Calculate RMSE values
+mpcCV <- RMSEP(PCA_model, estimate = "CV")
+rmse_values <- round(mpcCV$val, 1) # Rounded to first decimal to account for complexity
+
+# Plot the graph
+plot(mpcCV$comp, rmse_values, type = "b", xlab = "Number of Components", ylab = "RMSE")
+
+# Find the optimal number of components
+optimal_components <- mpcCV$comp[which.min(rmse_values)]
+points(optimal_components, min(rmse_values), col = "red", pch = 16)
+text(optimal_components, min(rmse_values), paste("Optimal:", optimal_components), pos = 3)
+```
+```{r}
+# Predict on the training data using the model
+predictions_train <- predict(PCA_model, train_data, ncomp = optimal_components-1)
+# Predict on the test data using the model
+predictions_test <- predict(PCA_model, test_data, ncomp = optimal_components-1)
+  
+# Calculate residuals for training and test data
+residuals_train <- train_data$total_UPDRS - predictions_train
+residuals_test <- test_data$total_UPDRS - predictions_test
+
+# Calculate R-squared for training data
+r2_train <- 1 - sum(residuals_train^2) / sum((train_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
+
+# Calculate adjusted R-squared for training data
+n_train <- nrow(train_data)
+p_train <- optimal_components - 1  # Number of predictors (components) used
+r2_adj_train <- 1 - (1 - r2_train) * ((n_train - 1) / (n_train - p_train - 1))
+  
+# Calculate RMSE for training data
+PCA_rmse_train <- sqrt(mean(residuals_train^2))
+# Calculate RMSE for test data
+PCA_clean_rmse_test <- sqrt(mean(residuals_test^2))
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de componentes", "R-squared", "Adjusted R-squared", "RMSE_train", "clean_rmse_test"),
+  Value = c((optimal_components - 1), r2_train, r2_adj_train, PCA_rmse_train, PCA_clean_rmse_test)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
+
+# Robust RMSE for ex3
 # Number of observations to trim
-n_trim_best <- round(0.1 * length(residuals_best))
+n_trim_best <- round(0.1 * length(residuals_test))
 # Sort the residuals in ascending order
-sorted_residuals_best <- sort(residuals_best)
+sorted_residuals_best <- sort(residuals_test)
 # Trim the specified percentage of observations from both ends
-trimmed_residuals_best <- sorted_residuals_best[(n_trim_best + 1):(length(residuals_best) - n_trim_best)]
+trimmed_residuals_best <- sorted_residuals_best[(n_trim_best + 1):(length(residuals_test) - n_trim_best)]
 # Calculate the trimmed mean of the residuals for the best model
 trimmed_mean_best <- mean(trimmed_residuals_best)
 # Calculate the squared residuals using the trimmed mean for the best model
 trimmed_squared_residuals_best <- (trimmed_residuals_best - trimmed_mean_best)^2
 # Calculate the robust RMSE using the trimmed mean for the best model
-clean_robust_rmse_best <- sqrt(mean(trimmed_squared_residuals_best))
+robust_PCA_clean_rmse_test <- sqrt(mean(trimmed_squared_residuals_best))
+```
+______________________________________________________________________
+```{r}
+library(MASS)
 
-# Ridge
-# install.packages('glmnet')
-library(glmnet)
-# Select predictor variables as matrix
-x_train = data.matrix(clean_train_data[7:22])
-y_train = clean_train_data$total_UPDRS
-x_test = data.matrix(test_data[7:22])
-y_test = test_data$total_UPDRS
-# Fit model
-clean_ridge_model = glmnet(x_train, y_train, alpha = 0, lambda = 1)
-# Make predictions
-predictions_test <- predict(clean_ridge_model, newx = x_test)
-# RMSE_test
-cleanm_ridge_rmse <- sqrt(mean((predictions_test - y_test)^2))
-# Extract the coefficients
-coefficients <- coef(clean_ridge_model)
+set.seed(123)
+
+mr <- lm.ridge(total_UPDRS ~ ., data = train_data, lambda=(seq(0, 0.1, 0.001)))
+(nGCV <- which.min(mr$GCV))
+
+lGCV <- mr$lambda[nGCV]
+matplot(mr$lambda,coef(mr),type="l", ylim=c(-2,2), xlab=expression(lambda),ylab=expression(hat(beta[i])))
+abline(v=lGCV,col=2)
+
+plot(mr$lambda,mr$GCV,type="l",xlab=expression(lambda),ylab="GCV")
+abline(v=lGCV,col=2)
+
+mr <- lm.ridge(total_UPDRS ~ ., data = train_data, lambda=lGCV)
+```
+```{r}
+# Make predictions (no y this time)
+predictions_test = cbind(1,as.matrix(test_data[,-1])) %*% coef(mr)
+predictions_train = cbind(1,as.matrix(train_data[,-1])) %*% coef(mr)
+
+# Calculate residuals for training and test data
+residuals_train <- train_data$total_UPDRS - predictions_train
+residuals_test <- test_data$total_UPDRS - predictions_test
+
+# Calculate R-squared for training data
+r2_train <- 1 - sum(residuals_train^2) / sum((train_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
+
+# Calculate adjusted R-squared for training data
+n_train <- nrow(train_data)
+p_train <- optimal_components - 1  # Number of predictors (components) used
+r2_adj_train <- 1 - (1 - r2_train) * ((n_train - 1) / (n_train - p_train - 1))
+  
+# Calculate RMSE for training data
+ridge_rmse_train <- sqrt(mean(residuals_train^2))
+# Calculate RMSE for test data
+ridge_clean_rmse_test <- sqrt(mean(residuals_test^2))
+
+# Extract the variable names
+variables <- colnames(test_data[,-1])
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de componentes", "R-squared", "Adjusted R-squared", "RMSE_train", "clean_rmse_test"),
+  Value = c((optimal_components - 1), r2_train, r2_adj_train, ridge_rmse_train, ridge_clean_rmse_test)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
+
+# Robust RMSE for ex 3
 # Number of observations to trim
 n_trim <- round(0.1 * length(residuals_test))
 # Sort the residuals in ascending order
@@ -730,14 +845,15 @@ trimmed_mean_test <- mean(trimmed_residuals_test)
 # Calculate the squared residuals using the trimmed mean:
 trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
 # Calculate the robust RMSE using the trimmed mean:
-clean_robust_rmse_ridge <- sqrt(mean(trimmed_squared_residuals_test))
+robust_ridge_clean_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
 ```
+
 ```{r}
 # Create a data frame for the results
 results <- data.frame(
   Modelo = c("OLS", "AIC", "RCP", "Ridge"),
-  RMSE_Con = c(rmse_test_lineal, rmse_test_AIC, best_rmse, rmse_test_ridge),
-  RMSE_Sin = c(rmse_clean_model_lineal, rmse_clean_model_step, clean_best_rmse, cleanm_ridge_rmse)
+  RMSE_Con = c(lineal_rmse_test, step_rmse_test, PCA_rmse_test, ridge_rmse_test),
+  RMSE_Sin = c(lineal_clean_rmse_test, step_clean_rmse_test, PCA_clean_rmse_test, ridge_clean_rmse_test)
 )
 
 print(results)
@@ -746,10 +862,10 @@ print(results)
 ```{r}
 # Checking if the points were correctly deleted
 # Re-calculate cooks distance
-cooksd_updated <- cooks.distance(clean_model_lineal)
+cooksd_updated <- cooks.distance(model_lineal) # Clean data
 
 # Plot both
-plot(cooksd_updated, pch = 20, cex = 1.5, main = "Cook's Distance Plot")
+plot(cooksd_updated, pch = 20, cex = 1.5, main = "Cook's Distance Plot Updated")
 plot(cooksd, pch = 20, cex = 1.5, main = "Cook's Distance Plot")
 ```
 
@@ -761,16 +877,80 @@ The trimmed mean is less sensitive to outliers and can provide a more robust est
 # Create a data frame for the results
 results2 <- data.frame(
   Modelo = c("OLS", "AIC", "RCP", "Ridge"),
-  RMSE_Con = c(rmse_test_lineal, rmse_test_AIC, best_rmse, rmse_test_ridge),
-  RMSE_Sin = c(rmse_clean_model_lineal, rmse_clean_model_step, clean_best_rmse, cleanm_ridge_rmse),
-  Robusto_Con = c(robust_rmse_lineal, robust_rmse_step, robust_rmse_best, robust_rmse_ridge),
-  Robusto_Sin = c(clean_robust_rmse_lineal, clean_robust_rmse_step, clean_robust_rmse_best, clean_robust_rmse_ridge),
+  RMSE_Con = c(lineal_rmse_test, step_rmse_test, PCA_rmse_test, ridge_rmse_test),
+  RMSE_Sin = c(lineal_clean_rmse_test, step_clean_rmse_test, PCA_clean_rmse_test, ridge_clean_rmse_test),
+  Robusto_Con = c(robust_lineal_rmse_test, robust_step_rmse_test, robust_PCA_rmse_test, robust_ridge_rmse_test),
+  Robusto_Sin = c(robust_lineal_clean_rmse_test, robust_step_clean_rmse_test, robust_PCA_clean_rmse_test, robust_ridge_clean_rmse_test)
 )
 
 print(results2)
 ```
 
 ### (c) LTS o Huber
+
+```{r}
+set.seed(123)
+
+# Data import
+# Note: I changed the variable names to avoid problems with symbols
+
+import.data <-
+"http://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/telemonitoring/parkinsons_updrs.data"
+parkinson <- read.table(url(import.data), sep=",", skip=1)
+names(parkinson) <- c("subject#","age","sex","test_time","motor_UPDRS","total_UPDRS",
+"Jitter_p","Jitter_Abs","Jitter_RAP","Jitter_PPQ5","Jitter_DDP",
+"Shimmer","Shimmer_dB","Shimmer_APQ3","Shimmer_APQ5","Shimmer_APQ11", "Shimmer_DDA","NHR","HNR","RPDE","DFA","PPE")
+
+# Select predictor variables and response
+library(dplyr)
+set.seed(123)
+parkinson <- parkinson %>% dplyr::select(6:22)
+
+# Split the data into train and test
+library(caret)
+set.seed(123)
+train_indices <- createDataPartition(parkinson$total_UPDRS, p = 0.8, list = FALSE)
+train_data <- parkinson[train_indices, ]
+test_data <- parkinson[-train_indices, ]
+
+# Huber
+require(MASS)
+hub <- rlm(total_UPDRS ~ ., data = train_data)
+summary(hub)
+
+# Predict on train and test data
+train_pred <- predict(hub, newdata = train_data)
+test_pred <- predict(hub, newdata = test_data)
+
+# Calculate R-squared
+train_r2 <- 1 - sum((train_data$total_UPDRS - train_pred)^2) / sum((train_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
+test_r2 <- 1 - sum((test_data$total_UPDRS - test_pred)^2) / sum((test_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
+
+# Calculate adjusted R-squared
+n <- nrow(train_data)
+p <- length(coef(hub))
+train_r2_adj <- 1 - (1 - train_r2) * ((n - 1) / (n - p - 1))
+test_r2_adj <- 1 - (1 - test_r2) * ((n - 1) / (n - p - 1))
+
+# Calculate RMSE
+train_rmse <- sqrt(mean((train_data$total_UPDRS - train_pred)^2))
+test_rmse <- sqrt(mean((test_data$total_UPDRS - test_pred)^2))
+
+# Create results table
+# Extract the variable names from the linear regression model
+variables <- names(coef(hub))[-1]
+
+# Create a data frame for the results
+results_table <- data.frame(
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
+  Value = c(length(variables), train_r2, train_r2_adj, train_rmse, test_rmse)
+)
+
+# Print the result table
+print(results_table)
+cat("Variables usadas en el modelo: ")
+cat(variables, sep=", ")
+```
 
 # ANEXO
 
