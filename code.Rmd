@@ -12,8 +12,12 @@ lang: Es-es
 
 # Ejercicio 1
 
+Se ha procedido a la carga de los datos, asegurándonos de asignar el estatus de factor a las variables "diagnosis" y "age_cat" (Código 1).
+
 ```{r}
-# Set viasulization number
+# Código 1: Carga de datos ejercicio 1
+
+# Set viasulization number for results
 options(scipen = 999)
 
 # Set the file path
@@ -22,9 +26,6 @@ file_path <- "D:/Antiguos estudios/MASTER2/Sem2/Regresion/PAC2/P2/pancreas_bioma
 # Load the data into a data frame
 data <- read.table(file_path, header = TRUE, sep = "\t")
 
-# Display the first few rows of the data frame
-head(data)
-
 # Saving variables as factors
 data$diagnosis <- factor(data$diagnosis, levels = 1:3)
 data$age_cat <- factor(data$age_cat)
@@ -32,18 +33,15 @@ data$age_cat <- factor(data$age_cat)
 
 ### (a) Modelo de regresión logística
 
-#### Diagnóstico de todos los casos
-```{r}
-model <- glm(diagnosis ~ age_cat + creatinine + LYVE1 + REG1B + TFF1, data = data, family = binomial)
+Dado que nuestro objetivo principal consiste en distinguir entre pacientes diagnosticados con cáncer y aquellos con otras afecciones pancreáticas, se excluyeron del modelo los individuos que pertenecen al grupo de control. A continuación, se realizó un ajuste de regresión utilizando "diagnosis" como variable dependiente y las variables independientes "age_cat", "creatinina", "LYVE1", "REG1B" y "TFF1" (Código 2).
 
-summary(model)
-```
+Aunque la inclusión de pacientes control en este caso no proporcionaría información específica sobre las diferencias entre los grupos de pacientes con cáncer y aquellos con afecciones no cancerosas, su exclusión del estudio plantea ciertas limitaciones. Entre estas limitaciones se destaca la posible falta de generalización de los resultados a la población general, así como la dificultad para evaluar la sensibilidad o especificidad del modelo.
 
-Tal y como podemos ver en los resultados, tan solo la creatinina, la LYVE1 y el TFF1 son variables que permiten predecir el riesgo de adenocarcinoma ductal pancreático. Se puede observar porque en todas ellas el pvalor es menos a 0.01. En el contexto de regresión logística un pvalor de 0.01 permite rechazar la hipótesis nula de no relación entre la variable predictora y la variable respuesta. En otras palabras, la variable tiene un impacto significativo sobre la clase.
-
-#### Sólo adenocarcinoma y otro
+Es importante tener en cuenta que al aplicar el modelo, se debe hacerlo con precaución y limitarlo a casos en los que se tenga conocimiento de una afectación pancreática, pero no se disponga de información sobre si es de naturaleza cancerosa. No se deben incluir pacientes sanos en la aplicación del modelo, ya que este no ha sido construido con los datos necesarios para tal propósito.
 
 ```{r}
+# Código 2: Ajuste regresión logística ejercicio 1a
+
 # Subset the data to include only levels 2 and 3 of the "diagnosis" variable
 subset_data <- subset(data, diagnosis != 1)
 
@@ -57,50 +55,52 @@ model <- glm(diagnosis ~ age_cat + creatinine + LYVE1 + REG1B + TFF1, data = sub
 summary(model)
 ```
 
-Tal y como podemos ver en los resultados, la edad a partir de 56 años es un indicador significativo. La LYVE1 y el REG1B también son variables que permiten predecir el riesgo de adenocarcinoma ductal pancreático. Se puede observar porque en todas ellas el pvalor es menos a 0.05. En el contexto de regresión logística un pvalor de 0.01 permite rechazar la hipótesis nula de no relación entre la variable predictora y la variable respuesta. En otras palabras, la variable tiene un impacto significativo sobre la clase.
+Los resultados obtenidos revelan que la edad, a partir de los 56 años, constituye un indicador significativo. Asimismo, se destaca que tanto LYVE1 como REG1B son variables relevantes para la predicción del riesgo de adenocarcinoma ductal pancreático. Esto se evidencia en el hecho de que todas estas variables presentan un valor p inferior a 0.05. En el contexto de la regresión logística, un valor p de 0.05 permite rechazar la hipótesis nula de ausencia de relación entre la variable predictora y la variable respuesta. En otras palabras, dichas variables tienen un impacto significativo sobre la clase.
 
-Que el intercepto también sea significativo sugiere que parte de la variable respuesta no es explicada por las variables independientes estudiadas. En regresión logística el intercepto captura la probabilidad de ocurrencia de un suceso cuando todas las variables predictoras están en su nivel de referencia. En otras palabras, un intercepto significativo implica que aunque no tengamos ningun predictor, hay diferencias significativas entre las clases.
+Es importante resaltar que la significancia del intercepto sugiere que parte de la variabilidad de la variable respuesta no puede ser explicada por las variables independientes consideradas en nuestro estudio. En la regresión logística, el intercepto captura la probabilidad de que ocurra un evento cuando todas las variables predictoras se encuentran en su nivel de referencia. En otras palabras, la significancia del intercepto implica que existen diferencias significativas entre las clases, incluso en ausencia de cualquier predictor.
+
+En conclusión, la edad (especialmente a partir de los 56 años), LYVE1 y REG1B son las variables que permiten predecir el riesgo de cáncer pancreático, brindando así la capacidad de distinguir entre otras afecciones pancreáticas no cancerosas.
 
 ### (b) Interpretación de coeficientes
 
-Los coeficientes en un modelo de regresión logística indican el cambio estimado en el log-odds del evento ocurriendo (codeado como 1 = adenocarcinoma ductal pancreático) asociado a una unidad de cambio en la variable predictora, sin variar el resto de variables.
+En un modelo de regresión logística, los coeficientes indican el cambio estimado en el logaritmo de las probabilidades (log-odds) del evento en estudio (en este caso, la presencia de adenocarcinoma ductal pancreático, codificado como 1) asociado a un cambio unitario en la variable predictora, manteniendo constantes las demás variables.
 
-Un estimador positivo sugiere que el incremento de la variable está asociado a un incremento de la probabilidad (log-odds) del evento ocurriendo. Si el estimador es 0.5 significa que al aumentar en 1 el valor del predictor, esto se asopcia a un 0.5 aumento del log-odds del evento ocurriendo. Este es el caso del LYVE1, al aumentar LYVE1 es más probable tener adenocarcinoma (0.3140). Lo mismo sucede con la edad, parece ser que tener más de 56 años aumenta el log-odds de tener adenocacinoma. Lo hace de forma distinta dependiendo del rango de edad, de 56-65 (3.032), de 66-75 (2.7) y a partir de 75 años (3.443).
+Un coeficiente estimado positivo sugiere que un incremento en el valor de la variable está asociado con un aumento en la probabilidad (log-odds) del evento en estudio. Por ejemplo, un coeficiente de 0.31 indica que un incremento de 1 en el valor del predictor se asocia con un aumento de 0.31 en el log-odds del evento en estudio. Este es el caso de LYVE1, donde un aumento en el valor de LYVE1 está relacionado con una mayor probabilidad de tener adenocarcinoma (0.3140). De manera similar, la edad también parece ser un factor influyente. Tener más de 56 años incrementa el log-odds de tener adenocarcinoma, y dicho incremento varía según los rangos de edad: de 56 a 65 años (3.032), de 66 a 75 años (2.7) y a partir de los 75 años (3.443).
 
-Contrariamente, un estimador negativo significa que un aumento de la variable disminuye el log-odds del evento ocurriendo (tener adenocarcinoma).
+A simple vista, podría parecer que la edad tiene un impacto mayor en la probabilidad de presentar adenocarcinoma en comparación con LYVE1 (0.31 < 2.7-3.4). Sin embargo, es importante tener en cuenta que esta comparación se basa en un aumento de 1 en el valor de la edad o LYVE1. La interpretación de la magnitud de los coeficientes estimados debe realizarse con cautela, ya que depende de la escala y las unidades de medida de cada variable. Además, es importante considerar que la escala de las variables puede influir en la magnitud de los coeficientes estimados y, por lo tanto, debe tenerse en cuenta al interpretarlos.
+
+Por otro lado, un coeficiente estimado negativo indica que un aumento en el valor de la variable está asociado con una disminución en el log-odds del evento en estudio (tener adenocarcinoma).
 
 ### (c) Modelo reducido
 
-Para comparar ambos modelos podemos realizar un anova aplicando el test Chi cuadrado. Con esto estamos comparando el ajuste del modelo bajo las siguientes hipótesis:
+Para realizar una comparación entre ambos modelos, podemos aplicar un análisis de varianza (ANOVA) utilizando el test de Chi cuadrado (Código 3). Con esto, evaluamos el ajuste de cada modelo bajo las siguientes hipótesis:
 
 - **H0:** Desviación del modelo reducido = Desviación del modelo completo. No hay diferencia de ajuste entre los modelos.
-- **H1:** Desviación del modelo reducido > Desviación del modelo completo. El modelo reducido se ajusta peor que el modelo completo.
+- **H1:** Desviación del modelo reducido > Desviación del modelo completo. El modelo reducido presenta un ajuste deficiente en comparación con el modelo completo.
 
-La desviación del modelo se refiere a la diferencia entre los valores reales de los datos y los valores predichos por el modelo.
+La desviación del modelo es una medida de la discrepancia entre los valores observados de los datos y los valores predichos por el modelo.
 
 ```{r}
-# Fit the logistic regression model using the subsetted data
+# Código 3: Anova del modelo reducido vs completo, ejercicio 1c 
+
+# Fit the logistic regression model using the subsetted data and indicated variables
 model_simple <- glm(diagnosis ~ age_cat + LYVE1 + REG1B, data = subset_data, family = binomial)
 
 summary(model_simple)
 
 # Compare the two models
 anova(model, model_simple, test = "Chi")
-
-# Install and load the "lmtest" package
-# install.packages("lmtest")
-library(lmtest)
-
-# Perform the likelihood ratio test
-lrtest(model, model_simple)
-
 ```
 
-Dado que el pvalor no es significativo (0.31) aceptamos la hipótesis nula, el modelo reducido (sin creatinina y sin TFF1) es igual de bueno que el complejo. Adicionalmente, vemos que el AIC del modelo reducido es 2 unidades menor que el del modelo complejo, esto sugiere que el modelo reducido tiene un ajuste mejor teniendo en cuenta la complejidad de ambos modelos.
+Al observar el resultado del p-valor (0.31), no encontramos evidencia significativa en contra de la hipótesis nula. Por lo tanto, aceptamos la hipótesis nula y concluimos que el modelo reducido (sin creatinina y sin TFF1) tiene un ajuste comparable al modelo completo. Además, al comparar los valores del criterio de información de Akaike (AIC), observamos que el AIC del modelo reducido es 2 unidades menor que el del modelo completo. Esto sugiere que el modelo reducido tiene un mejor ajuste, teniendo en cuenta la complejidad de ambos modelos.
 
 ### (d) Funcion cuadrática
 
+Ajustamos dos modelos adicionales, uno que incluye el término cuadrático de LYVE1 y otro que incluye el término cuadrático de REB1B. Posteriormente, realizamos un análisis de varianza (ANOVA) para comparar cada modelo con su versión reducida (sin los términos cuadráticos) (Código 4).
+
 ```{r}
+# Codigo 4: Suposición de linealidad mediante la adición de términos cuadráticos, ejercicio 1d
+
 # Cuadratic LYVE1
 model_simple_LYVE1 = glm(diagnosis ~ age_cat + LYVE1 + I(LYVE1^2) + REG1B, data = subset_data, family = binomial)
 
@@ -116,16 +116,17 @@ summary(model_simple_REG1B)
 
 # Compare the two models
 anova(model_simple, model_simple_REG1B, test = "Chi")
-
 ```
 
-En ninguno de los dos casos añadir el término cuadrático ha mejorado el ajuste del modelo. Siguiendo la explicación del apartado anterior: pv = 0.3 y 0.4, aceptamos H0 los dos modelos tienen el mismo ajuste.
+En ambos casos, al añadir los términos cuadráticos, no se observó una mejora significativa en el ajuste del modelo. Siguiendo la explicación anterior, los valores de p fueron 0.3 y 0.4, respectivamente, lo que nos lleva a aceptar la hipótesis nula en ambos casos. Esto implica que los modelos con y sin los términos cuadráticos tienen un ajuste similar.
 
-Adicionalmente, si examinamos el AIC veremos que en los modelos con el término cuadrático este es superior. Un valor mayor AIC sugiere que el modelo no se ajusta mejor para la complejidad que presenta.
+Además, al examinar los valores del criterio de información de Akaike (AIC), se observa que los modelos con los términos cuadráticos presentan un AIC superior. Un valor de AIC más alto sugiere que el modelo no se ajusta mejor teniendo en cuenta la complejidad añadida por los términos cuadráticos.
 
-En conclusión, no deberíamos incluir ninguno de los dos términos cuadráticos. Es importante comentar que, aunque estos tests aparezcan no-significativos, hay que valorarlos siempre junto con el contexto del análisis. En este caso, se ha realizado adicionalmente una inspección visual de la variable vs el log odds de la variable respuesta (disponible en el ANEXO). Estos gráficos nos confirman que efectivamente, existe una relación lineal, dado que se observa un patrón lineal sin observar otros patrones como curvas, forma de U, etc.
+En conclusión, no se recomienda incluir ninguno de los términos cuadráticos en los modelos. Es importante destacar que, aunque los resultados de los tests no sean significativos, siempre se deben evaluar en conjunto con el contexto del análisis. En este caso, se realizó una inspección visual adicional de la relación entre las variables y el log-odds de la variable respuesta (disponible en el ANEXO, Código 5). Estos gráficos confirman que existe una relación lineal, ya que se observa un patrón lineal sin la presencia de curvas, forma de U u otros patrones no lineales.
 
 ```{r}
+# Código 5: variable vs log odds para linealidad del ejercicio 1d
+
 # Obtain predicted log odds from the model
 predicted_logodds <- predict(model_simple, type = "link")
 
@@ -136,20 +137,29 @@ plot(subset_data$REG1B, predicted_logodds, xlab = "age_cat", ylab = "Log Odds", 
 
 ### (e) Predicción de caso
 
+Guardamos los datos del paciente con los valores indicados en el enunciado. Dado que la edad del paciente es de 68 años, esta cae dentro del rango de 66 a 75 años, por lo que se almacena en la variable "age_cat" con dicho rango. El resto de las variables se guardan utilizando los valores numéricos correspondientes. A continuación, aplicamos la función "predict" al modelo reducido utilizando estos datos y especificamos el tipo de respuesta como "response" para obtener la probabilidad con la que el caso ha sido clasificado (Código 6).
+
 ```{r}
+# Código 6: Predicción de caso para el ejercicio 1e
+
 # Create a new data frame for the new case
 new_case = data.frame(age_cat = "66-75", LYVE1 = 6, REG1B = 140)
 
 # Predict the outcome using the model
 prediction = predict(model_simple, newdata = new_case, type = "response")
 
-print(prediction)
+cat("Tipo de afección: ", names(prediction), "\n")
+cat("Probabilidad de la clasificación: ", prediction[1])
 ```
-El modelo predice la presencia de adenocarcinoma ductal pancreático con un 72,42% de probabilidad. Recordemos que los valores fueron recodificados a 0 = afecciones pancreáticas no cancerosas y 1 = adenocarcinoma ductal pancreático.
+El modelo predice la presencia de adenocarcinoma ductal pancreático con una probabilidad del 72,42%. Cabe destacar que los valores fueron recodificados de la siguiente manera: 0 representa afecciones pancreáticas no cancerosas y 1 representa adenocarcinoma ductal pancreático.
 
-La extrapolación ocurre cuando se hacen predicciones de para datos de la variable predictora fuera del rango de los datos usados para contruir el modelo.
+Es importante tener en cuenta que la extrapolación se produce cuando se realizan predicciones para datos de la variable predictora que se encuentran fuera del rango de los datos utilizados para construir el modelo. En este caso, es necesario considerar que la predicción se basa en los datos y el rango utilizados durante el entrenamiento del modelo, por lo que las predicciones para valores fuera de ese rango pueden ser menos precisas o no reflejar adecuadamente la realidad.
+
+Con el propósito de verificar la idoneidad del modelo, hemos examinado los rangos de las variables LYVE1 y REG1B. En el código implementado, se ha incorporado una comparación automática que determina si los valores pertenecen o no a los rangos establecidos, utilizando un valor booleano. Además, se han generado gráficos que representan los datos utilizados en la construcción del modelo para cada variable, resaltando en color rojo el caso de estudio en cuestión (Código 7).
 
 ```{r}
+# Código 7: Comprobación de extrapolación para el caso del ejercicio 1e
+
 # Check predictor variable ranges
 range_data <- sapply(subset_data[, c("LYVE1", "REG1B")], range)
 range_new_observation <- c(6, 140)  # Replace with the values of the new observation
@@ -158,7 +168,7 @@ range_new_observation <- c(6, 140)  # Replace with the values of the new observa
 is_extrapolation <- any(range_new_observation < range_data[1, ] | range_new_observation > range_data[2, ])
 
 # Print results
-cat("Extrapolation:", is_extrapolation, "\n")
+cat("Extrapolación:", is_extrapolation, "\n")
 
 # Assess distribution of predictor variables
 # LYVE1
@@ -177,27 +187,30 @@ barplot(table(subset_data$age_cat), main = "Distribution of age_cat", xlab = "ag
 points(5.5, 0, col = "red", pch = 16)
 ```
 
-Como podemos ver, los valores del caso a predecir se encuentra entre el rango utilizado para construir el modelo.
+Como podemos observar, los valores correspondientes al caso que deseamos predecir se encuentran dentro de los rangos utilizados en la construcción del modelo para las tres variables.
+
+Es relevante destacar que las variables creatinina y TFF1 no han sido incluidas en el modelo debido a que hemos determinado que el modelo reducido, es decir, aquel sin la inclusión de estas variables, presenta un ajuste igual o mejor que el modelo completo. Del mismo modo, podemos aplicar el modelo en este caso particular, dado que se trata de un paciente con una afección pancreática que requerimos clasificar como cancerosa o no cancerosa. Como hemos explicado previamente, si se tratara de un paciente sano, no podríamos aplicar este modelo con la misma certeza.
 
 # Ejercicio 2
 
 ```{r}
-set.seed(123)
+# Código 8: Carga de datos para el ejercicio 2 y 3
+
+set.seed(123) # Seed is fixed multiple times in the code because it somehow was needed
 
 # Data import
 # Note: I changed the variable names to avoid problems with symbols
 
 import.data <-
 "http://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/telemonitoring/parkinsons_updrs.data"
-parkinson <- read.table(url(import.data), sep=",", skip=1)
-names(parkinson) <- c("subject#","age","sex","test_time","motor_UPDRS","total_UPDRS",
+data <- read.table(url(import.data), sep=",", skip=1)
+names(data) <- c("subject#","age","sex","test_time","motor_UPDRS","total_UPDRS",
 "Jitter_p","Jitter_Abs","Jitter_RAP","Jitter_PPQ5","Jitter_DDP",
 "Shimmer","Shimmer_dB","Shimmer_APQ3","Shimmer_APQ5","Shimmer_APQ11", "Shimmer_DDA","NHR","HNR","RPDE","DFA","PPE")
 
 # Select predictor variables and response
 library(dplyr)
-set.seed(123)
-parkinson <- parkinson %>% dplyr::select(6:22)
+parkinson <- data %>% dplyr::select(6:22)
 
 # Split the data into train and test
 library(caret)
@@ -539,7 +552,6 @@ plot(model_lineal, which = 4)
 
 # Residuals vs. fitted values plot
 plot(model_lineal, which = 5)
-
 ```
     which = 1: Residuals vs. Fitted: Alrededor de 0, mas o menos lineal
     which = 2: Normal Q-Q plot: No son muy normal en linea recta
@@ -579,6 +591,21 @@ Todos los tipos de Jitter están muy relacionados con todos los tipos de Jitter 
 Tolerance is the reciprocal of the VIF. It indicates the proportion of variance in an independent variable that is not explained by other independent variables. Variables with low tolerance values (close to 0) indicate high multicollinearity.
 
 The VIF measures how much the variance of the estimated regression coefficient is inflated due to multicollinearity.
+
+```{r}
+# Calculate residuals
+residuals <- residuals(model_lineal)
+
+# Plot residuals
+plot(residuals[-length(residuals)], residuals[-1], xlab = "Residual i", ylab = "Residual i+1", main = "Correlation between residuals")
+
+```
+
+If your data is randomly ordered and does not have a time component, then the concept of "consecutive residuals" in the temporal sense may not be directly applicable. The assumption of independence between residuals in linear regression typically assumes that the order of the data points does not matter, as long as the observations are independent and identically distributed.
+
+In this case, you can still check for correlation between the residuals, but the interpretation would be different. Instead of investigating temporal dependence, you would be examining whether there is a pattern or relationship between the residuals regardless of their order. The correlation between residuals can provide insights into potential systematic patterns or relationships in the errors that may affect the validity of your linear model.
+
+Therefore, while the concept of consecutive residuals in a temporal sense may not be relevant to your randomly ordered data, you can still use the code you provided to check for correlation between the residuals and investigate whether there are correlated errors present in your linear model.
 
 # Ejercicio 3
 
@@ -709,6 +736,8 @@ trimmed_mean_test <- mean(trimmed_residuals_test)
 trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
 # Calculate the robust RMSE using the trimmed mean:
 robust_step_clean_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
+
+mean(residuals_test, trim=0.1)
 ```
 ______________________________________________________________________
 ```{r}
