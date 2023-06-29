@@ -193,6 +193,8 @@ Es relevante destacar que las variables creatinina y TFF1 no han sido incluidas 
 
 # Ejercicio 2
 
+Se procede a realizar la carga de los datos utilizando el código proporcionado en el enunciado. Se ha optado por cambiar los nombres de las variables, ya que la presencia de paréntesis podría ocasionar problemas durante la ejecución del código. A continuación, se lleva a cabo la creación de un data frame que incluye únicamente las variables de interés. Se realiza el proceso de eliminación de valores perdidos y, utilizando el paquete "caret", se procede a la división de los datos en conjuntos de entrenamiento (80%) y prueba (20%).
+
 ```{r}
 # Código 8: Carga de datos para el ejercicio 2 y 3
 
@@ -212,12 +214,15 @@ names(data) <- c("subject#","age","sex","test_time","motor_UPDRS","total_UPDRS",
 library(dplyr)
 parkinson <- data %>% dplyr::select(6:22)
 
+# Delete NA values
+parkinson <- na.omit(parkinson)
+
 # Split the data into train and test
 library(caret)
 set.seed(123)
 train_indices <- createDataPartition(parkinson$total_UPDRS, p = 0.8, list = FALSE)
-train_data <- parkinson[train_indices, ]
-test_data <- parkinson[-train_indices, ]
+data.train <- parkinson[train_indices, ]
+data.test <- parkinson[-train_indices, ]
 ```
 
 ### (a) Regresión lineal
@@ -226,7 +231,7 @@ Al no utilizar el factor "sujeto" no tenemos en cuenta las posibles variaciones 
 
 ```{r}
 # Fit the model
-model_lineal = lm(total_UPDRS ~ ., data = train_data)
+model_lineal = lm(total_UPDRS ~ ., data = data.train)
 
 # Extract R-squared
 r_squared = summary(model_lineal)$r.squared
@@ -235,14 +240,14 @@ r_squared = summary(model_lineal)$r.squared
 adj_r_squared = summary(model_lineal)$adj.r.squared
 
 # Predict on the training data
-predictions_train = predict(model_lineal, train_data)
+predictions_train = predict(model_lineal, data.train)
 # Predict on the test data
-predictions_test <- predict(model_lineal, test_data)
+predictions_test <- predict(model_lineal, data.test)
 
 # Calculate residuals train
-residuals_train = train_data$total_UPDRS - predictions_train
+residuals_train = data.train$total_UPDRS - predictions_train
 # Calculate residuals test
-residuals_test <- test_data$total_UPDRS - predictions_test
+residuals_test <- data.test$total_UPDRS - predictions_test
 
 # Calculate RMSE train
 lineal_rmse_train = sqrt(mean(residuals_train^2))
@@ -302,14 +307,14 @@ r_squared = summary(model_stepwise)$r.squared
 adj_r_squared = summary(model_stepwise)$adj.r.squared
 
 # Predict on the training data
-predictions_train = predict(model_stepwise, train_data)
+predictions_train = predict(model_stepwise, data.train)
 # Predict on the test data
-predictions_test <- predict(model_stepwise, test_data)
+predictions_test <- predict(model_stepwise, data.test)
 
 # Calculate residuals
-residuals_train = train_data$total_UPDRS - predictions_train
+residuals_train = data.train$total_UPDRS - predictions_train
 # Calculate residuals
-residuals_test <- test_data$total_UPDRS - predictions_test
+residuals_test <- data.test$total_UPDRS - predictions_test
 
 # Calculate RMSE train
 step_rmse_train = sqrt(mean(residuals_train^2))
@@ -363,7 +368,7 @@ library(pls)
 
 set.seed(123)
 
-PCA_model <- pcr(total_UPDRS ~ ., data = train_data, validation="CV", scale = TRUE)
+PCA_model <- pcr(total_UPDRS ~ ., data = data.train, validation="CV", scale = TRUE)
 
 # Calculate RMSE values
 mpcCV <- RMSEP(PCA_model, estimate = "CV")
@@ -393,19 +398,19 @@ Since RMSE measures the magnitude of the prediction errors, a smaller RMSE impli
 
 ```{r}
 # Predict on the training data using the model
-predictions_train <- predict(PCA_model, train_data, ncomp = optimal_components-1)
+predictions_train <- predict(PCA_model, data.train, ncomp = optimal_components-1)
 # Predict on the test data using the model
-predictions_test <- predict(PCA_model, test_data, ncomp = optimal_components-1)
+predictions_test <- predict(PCA_model, data.test, ncomp = optimal_components-1)
   
 # Calculate residuals for training and test data
-residuals_train <- train_data$total_UPDRS - predictions_train
-residuals_test <- test_data$total_UPDRS - predictions_test
+residuals_train <- data.train$total_UPDRS - predictions_train
+residuals_test <- data.test$total_UPDRS - predictions_test
 
 # Calculate R-squared for training data
-r2_train <- 1 - sum(residuals_train^2) / sum((train_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
+r2_train <- 1 - sum(residuals_train^2) / sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
 
 # Calculate adjusted R-squared for training data
-n_train <- nrow(train_data)
+n_train <- nrow(data.train)
 p_train <- optimal_components - 1  # Number of predictors (components) used
 r2_adj_train <- 1 - (1 - r2_train) * ((n_train - 1) / (n_train - p_train - 1))
   
@@ -453,7 +458,7 @@ library(MASS)
 
 set.seed(123)
 
-mr <- lm.ridge(total_UPDRS ~ ., data = train_data, lambda=(seq(0, 0.1, 0.001)))
+mr <- lm.ridge(total_UPDRS ~ ., data = data.train, lambda=(seq(0, 0.1, 0.001)))
 (nGCV <- which.min(mr$GCV))
 
 lGCV <- mr$lambda[nGCV]
@@ -463,23 +468,23 @@ abline(v=lGCV,col=2)
 plot(mr$lambda,mr$GCV,type="l",xlab=expression(lambda),ylab="GCV")
 abline(v=lGCV,col=2)
 
-mr <- lm.ridge(total_UPDRS ~ ., data = train_data, lambda=lGCV)
+mr <- lm.ridge(total_UPDRS ~ ., data = data.train, lambda=lGCV)
 ```
 
 ```{r}
 # Make predictions (no y this time)
-predictions_test = cbind(1,as.matrix(test_data[,-1])) %*% coef(mr)
-predictions_train = cbind(1,as.matrix(train_data[,-1])) %*% coef(mr)
+predictions_test = cbind(1,as.matrix(data.test[,-1])) %*% coef(mr)
+predictions_train = cbind(1,as.matrix(data.train[,-1])) %*% coef(mr)
 
 # Calculate residuals for training and test data
-residuals_train <- train_data$total_UPDRS - predictions_train
-residuals_test <- test_data$total_UPDRS - predictions_test
+residuals_train <- data.train$total_UPDRS - predictions_train
+residuals_test <- data.test$total_UPDRS - predictions_test
 
 # Calculate R-squared for training data
-r2_train <- 1 - sum(residuals_train^2) / sum((train_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
+r2_train <- 1 - sum(residuals_train^2) / sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
 
 # Calculate adjusted R-squared for training data
-n_train <- nrow(train_data)
+n_train <- nrow(data.train)
 p_train <- optimal_components - 1  # Number of predictors (components) used
 r2_adj_train <- 1 - (1 - r2_train) * ((n_train - 1) / (n_train - p_train - 1))
   
@@ -489,7 +494,7 @@ ridge_rmse_train <- sqrt(mean(residuals_train^2))
 ridge_rmse_test <- sqrt(mean(residuals_test^2))
 
 # Extract the variable names
-variables <- colnames(test_data[,-1])
+variables <- colnames(data.test[,-1])
 
 # Create a data frame for the results
 results_table <- data.frame(
@@ -562,7 +567,7 @@ plot(model_lineal, which = 5)
 Multicollinearity refers to a situation where independent variables in a regression model are highly correlated with each other. It can cause issues in the interpretation of coefficients and affect the stability and reliability of the regression model. To study multicollinearity in R, you can use the following approaches:
 
 ```{r}
-cor_matrix <- cor(train_data[, c("Jitter_p","Jitter_Abs","Jitter_RAP","Jitter_PPQ5","Jitter_DDP",
+cor_matrix <- cor(data.train[, c("Jitter_p","Jitter_Abs","Jitter_RAP","Jitter_PPQ5","Jitter_DDP",
 "Shimmer","Shimmer_dB","Shimmer_APQ3","Shimmer_APQ5","Shimmer_APQ11", "Shimmer_DDA","NHR","HNR","RPDE","DFA","PPE")])
 
 # install.packages("corrplot")
@@ -619,14 +624,14 @@ cooksd <- cooks.distance(model_lineal)
 top3_indices <- order(cooksd, decreasing = TRUE)[1:3]
 
 # Remove the points
-train_data <- train_data[-top3_indices, ]
+data.train <- data.train[-top3_indices, ]
 ```
 
 Re-execute everything but with clean data
 
 ```{r}
 # Fit the model
-model_lineal = lm(total_UPDRS ~ ., data = train_data)
+model_lineal = lm(total_UPDRS ~ ., data = data.train)
 
 # Extract R-squared
 r_squared = summary(model_lineal)$r.squared
@@ -635,14 +640,14 @@ r_squared = summary(model_lineal)$r.squared
 adj_r_squared = summary(model_lineal)$adj.r.squared
 
 # Predict on the training data
-predictions_train = predict(model_lineal, train_data)
+predictions_train = predict(model_lineal, data.train)
 # Predict on the test data
-predictions_test <- predict(model_lineal, test_data)
+predictions_test <- predict(model_lineal, data.test)
 
 # Calculate residuals train
-residuals_train = train_data$total_UPDRS - predictions_train
+residuals_train = data.train$total_UPDRS - predictions_train
 # Calculate residuals test
-residuals_test <- test_data$total_UPDRS - predictions_test
+residuals_test <- data.test$total_UPDRS - predictions_test
 
 # Calculate RMSE train
 lineal_rmse_train = sqrt(mean(residuals_train^2))
@@ -694,14 +699,14 @@ r_squared = summary(model_stepwise)$r.squared
 adj_r_squared = summary(model_stepwise)$adj.r.squared
 
 # Predict on the training data
-predictions_train = predict(model_stepwise, train_data)
+predictions_train = predict(model_stepwise, data.train)
 # Predict on the test data
-predictions_test <- predict(model_stepwise, test_data)
+predictions_test <- predict(model_stepwise, data.test)
 
 # Calculate residuals
-residuals_train = train_data$total_UPDRS - predictions_train
+residuals_train = data.train$total_UPDRS - predictions_train
 # Calculate residuals
-residuals_test <- test_data$total_UPDRS - predictions_test
+residuals_test <- data.test$total_UPDRS - predictions_test
 
 # Calculate RMSE train
 step_rmse_train = sqrt(mean(residuals_train^2))
@@ -746,7 +751,7 @@ library(pls)
 
 set.seed(123)
 
-PCA_model <- pcr(total_UPDRS ~ ., data = train_data, validation="CV", scale = TRUE)
+PCA_model <- pcr(total_UPDRS ~ ., data = data.train, validation="CV", scale = TRUE)
 
 # Calculate RMSE values
 mpcCV <- RMSEP(PCA_model, estimate = "CV")
@@ -762,19 +767,19 @@ text(optimal_components, min(rmse_values), paste("Optimal:", optimal_components)
 ```
 ```{r}
 # Predict on the training data using the model
-predictions_train <- predict(PCA_model, train_data, ncomp = optimal_components-1)
+predictions_train <- predict(PCA_model, data.train, ncomp = optimal_components-1)
 # Predict on the test data using the model
-predictions_test <- predict(PCA_model, test_data, ncomp = optimal_components-1)
+predictions_test <- predict(PCA_model, data.test, ncomp = optimal_components-1)
   
 # Calculate residuals for training and test data
-residuals_train <- train_data$total_UPDRS - predictions_train
-residuals_test <- test_data$total_UPDRS - predictions_test
+residuals_train <- data.train$total_UPDRS - predictions_train
+residuals_test <- data.test$total_UPDRS - predictions_test
 
 # Calculate R-squared for training data
-r2_train <- 1 - sum(residuals_train^2) / sum((train_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
+r2_train <- 1 - sum(residuals_train^2) / sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
 
 # Calculate adjusted R-squared for training data
-n_train <- nrow(train_data)
+n_train <- nrow(data.train)
 p_train <- optimal_components - 1  # Number of predictors (components) used
 r2_adj_train <- 1 - (1 - r2_train) * ((n_train - 1) / (n_train - p_train - 1))
   
@@ -814,7 +819,7 @@ library(MASS)
 
 set.seed(123)
 
-mr <- lm.ridge(total_UPDRS ~ ., data = train_data, lambda=(seq(0, 0.1, 0.001)))
+mr <- lm.ridge(total_UPDRS ~ ., data = data.train, lambda=(seq(0, 0.1, 0.001)))
 (nGCV <- which.min(mr$GCV))
 
 lGCV <- mr$lambda[nGCV]
@@ -824,22 +829,22 @@ abline(v=lGCV,col=2)
 plot(mr$lambda,mr$GCV,type="l",xlab=expression(lambda),ylab="GCV")
 abline(v=lGCV,col=2)
 
-mr <- lm.ridge(total_UPDRS ~ ., data = train_data, lambda=lGCV)
+mr <- lm.ridge(total_UPDRS ~ ., data = data.train, lambda=lGCV)
 ```
 ```{r}
 # Make predictions (no y this time)
-predictions_test = cbind(1,as.matrix(test_data[,-1])) %*% coef(mr)
-predictions_train = cbind(1,as.matrix(train_data[,-1])) %*% coef(mr)
+predictions_test = cbind(1,as.matrix(data.test[,-1])) %*% coef(mr)
+predictions_train = cbind(1,as.matrix(data.train[,-1])) %*% coef(mr)
 
 # Calculate residuals for training and test data
-residuals_train <- train_data$total_UPDRS - predictions_train
-residuals_test <- test_data$total_UPDRS - predictions_test
+residuals_train <- data.train$total_UPDRS - predictions_train
+residuals_test <- data.test$total_UPDRS - predictions_test
 
 # Calculate R-squared for training data
-r2_train <- 1 - sum(residuals_train^2) / sum((train_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
+r2_train <- 1 - sum(residuals_train^2) / sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
 
 # Calculate adjusted R-squared for training data
-n_train <- nrow(train_data)
+n_train <- nrow(data.train)
 p_train <- optimal_components - 1  # Number of predictors (components) used
 r2_adj_train <- 1 - (1 - r2_train) * ((n_train - 1) / (n_train - p_train - 1))
   
@@ -849,7 +854,7 @@ ridge_rmse_train <- sqrt(mean(residuals_train^2))
 ridge_clean_rmse_test <- sqrt(mean(residuals_test^2))
 
 # Extract the variable names
-variables <- colnames(test_data[,-1])
+variables <- colnames(data.test[,-1])
 
 # Create a data frame for the results
 results_table <- data.frame(
@@ -939,31 +944,31 @@ parkinson <- parkinson %>% dplyr::select(6:22)
 library(caret)
 set.seed(123)
 train_indices <- createDataPartition(parkinson$total_UPDRS, p = 0.8, list = FALSE)
-train_data <- parkinson[train_indices, ]
-test_data <- parkinson[-train_indices, ]
+data.train <- parkinson[train_indices, ]
+data.test <- parkinson[-train_indices, ]
 
 # Huber
 require(MASS)
-hub <- rlm(total_UPDRS ~ ., data = train_data)
+hub <- rlm(total_UPDRS ~ ., data = data.train)
 summary(hub)
 
 # Predict on train and test data
-train_pred <- predict(hub, newdata = train_data)
-test_pred <- predict(hub, newdata = test_data)
+train_pred <- predict(hub, newdata = data.train)
+test_pred <- predict(hub, newdata = data.test)
 
 # Calculate R-squared
-train_r2 <- 1 - sum((train_data$total_UPDRS - train_pred)^2) / sum((train_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
-test_r2 <- 1 - sum((test_data$total_UPDRS - test_pred)^2) / sum((test_data$total_UPDRS - mean(train_data$total_UPDRS))^2)
+train_r2 <- 1 - sum((data.train$total_UPDRS - train_pred)^2) / sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
+test_r2 <- 1 - sum((data.test$total_UPDRS - test_pred)^2) / sum((data.test$total_UPDRS - mean(data.train$total_UPDRS))^2)
 
 # Calculate adjusted R-squared
-n <- nrow(train_data)
+n <- nrow(data.train)
 p <- length(coef(hub))
 train_r2_adj <- 1 - (1 - train_r2) * ((n - 1) / (n - p - 1))
 test_r2_adj <- 1 - (1 - test_r2) * ((n - 1) / (n - p - 1))
 
 # Calculate RMSE
-train_rmse <- sqrt(mean((train_data$total_UPDRS - train_pred)^2))
-test_rmse <- sqrt(mean((test_data$total_UPDRS - test_pred)^2))
+train_rmse <- sqrt(mean((data.train$total_UPDRS - train_pred)^2))
+test_rmse <- sqrt(mean((data.test$total_UPDRS - test_pred)^2))
 
 # Create results table
 # Extract the variable names from the linear regression model
