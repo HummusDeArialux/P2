@@ -8,6 +8,9 @@ output:
     toc_depth: 4
 lang: Es-es
 ---
+
+Nota: Todos los códigos completos y el resultado de su ejecución se pueden encontrar en el ANEXO.
+
 \newpage
 
 # Ejercicio 1
@@ -71,9 +74,32 @@ A simple vista, podría parecer que la edad tiene un impacto mayor en la probabi
 
 Por otro lado, un coeficiente estimado negativo indica que un aumento en el valor de la variable está asociado con una disminución en el log-odds del evento en estudio (tener adenocarcinoma).
 
+Con el propósito de mejorar la interpretación de los coeficientes, se ha aplicado una transformación al odds ratio mediante el cálculo exponencial (Código 3). El odds ratio representa la multiplicación de las probabilidades de éxito al comparar dos grupos que difieren en una unidad en el predictor numérico. Un odds ratio mayor a 1 indica que el aumento en el predictor numérico está asociado con un mayor riesgo relativo de ocurrencia del evento de interés. Por otro lado, un odds ratio menor a 1 indica un menor riesgo relativo de ocurrencia del evento, mientras que un odds ratio de 1 indica que no hay cambio en el riesgo relativo entre los dos grupos comparados.
+
+```{r}
+# Código 3: Conversión de log-odds a odds ratio para el ejercicio 1b
+
+# Extract the coefficient values
+coef_values <- data.frame(coef(model))
+
+# Exponentiate the coefficients to obtain odds ratios
+odds_ratios <- exp(coef_values)
+
+# Format the table using kable()
+library(knitr)
+formatted_table <- kable(odds_ratios, align = "c", col.names = c("Odds ratios"), format = "pandoc")
+
+# Print the odds ratios
+print(formatted_table)
+```
+
+Al examinar los valores del odds ratio, se evidencia que a medida que la edad aumenta, parece existir una mayor probabilidad de presentar adenocarcinoma (con un odds ratio más alto). Sin embargo, es importante destacar que esta relación no se aplica a la categoría de edad de 66 a 75 años, donde la probabilidad es menor en comparación con la categoría de 56 a 65 años. Por otro lado, el predictor LYVE1 también muestra un aumento en la probabilidad de padecer adenocarcinoma.
+
+Es crucial tener en cuenta que, dado que los odds ratios son medidas relativas, no es apropiado realizar una comparación directa de los valores de los odds ratios de dos variables diferentes para determinar cuál tiene un mayor impacto en la probabilidad del evento en cuestión. Esto se debe a que la magnitud de los odds ratios puede variar según el rango y la escala de las variables involucradas.
+
 ### (c) Modelo reducido
 
-Para realizar una comparación entre ambos modelos, podemos aplicar un análisis de varianza (ANOVA) utilizando el test de Chi cuadrado (Código 3). Con esto, evaluamos el ajuste de cada modelo bajo las siguientes hipótesis:
+Para realizar una comparación entre ambos modelos, podemos aplicar un análisis de varianza (ANOVA) utilizando el test de Chi cuadrado (Código 4). Con esto, evaluamos el ajuste de cada modelo bajo las siguientes hipótesis:
 
 - **H0:** Desviación del modelo reducido = Desviación del modelo completo. No hay diferencia de ajuste entre los modelos.
 - **H1:** Desviación del modelo reducido > Desviación del modelo completo. El modelo reducido presenta un ajuste deficiente en comparación con el modelo completo.
@@ -81,7 +107,7 @@ Para realizar una comparación entre ambos modelos, podemos aplicar un análisis
 La desviación del modelo es una medida de la discrepancia entre los valores observados de los datos y los valores predichos por el modelo.
 
 ```{r}
-# Código 3: Anova del modelo reducido vs completo, ejercicio 1c 
+# Código 4: Anova del modelo reducido vs completo, ejercicio 1c 
 
 # Fit the logistic regression model using the subsetted data and indicated variables
 model_simple <- glm(diagnosis ~ age_cat + LYVE1 + REG1B, data = subset_data, family = binomial)
@@ -96,10 +122,10 @@ Al observar el resultado del p-valor (0.31), no encontramos evidencia significat
 
 ### (d) Funcion cuadrática
 
-Ajustamos dos modelos adicionales, uno que incluye el término cuadrático de LYVE1 y otro que incluye el término cuadrático de REB1B. Posteriormente, realizamos un análisis de varianza (ANOVA) para comparar cada modelo con su versión reducida (sin los términos cuadráticos) (Código 4).
+Ajustamos dos modelos adicionales, uno que incluye el término cuadrático de LYVE1 y otro que incluye el término cuadrático de REB1B. Posteriormente, realizamos un análisis de varianza (ANOVA) para comparar cada modelo con su versión reducida (sin los términos cuadráticos) (Código 5).
 
 ```{r}
-# Codigo 4: Suposición de linealidad mediante la adición de términos cuadráticos, ejercicio 1d
+# Codigo 5: Suposición de linealidad mediante la adición de términos cuadráticos, ejercicio 1d
 
 # Cuadratic LYVE1
 model_simple_LYVE1 = glm(diagnosis ~ age_cat + LYVE1 + I(LYVE1^2) + REG1B, data = subset_data, family = binomial)
@@ -120,12 +146,12 @@ anova(model_simple, model_simple_REG1B, test = "Chi")
 
 En ambos casos, al añadir los términos cuadráticos, no se observó una mejora significativa en el ajuste del modelo. Siguiendo la explicación anterior, los valores de p fueron 0.3 y 0.4, respectivamente, lo que nos lleva a aceptar la hipótesis nula en ambos casos. Esto implica que los modelos con y sin los términos cuadráticos tienen un ajuste similar.
 
-Además, al examinar los valores del criterio de información de Akaike (AIC), se observa que los modelos con los términos cuadráticos presentan un AIC superior. Un valor de AIC más alto sugiere que el modelo no se ajusta mejor teniendo en cuenta la complejidad añadida por los términos cuadráticos.
+Además, al analizar la desviación de cada modelo durante la realización de la prueba de anova, se observa que no disminuye de manera significativa. Este hallazgo sugiere que la incorporación de los términos cuadráticos no mejora el ajuste del modelo, lo que a su vez indica que no existen indicios de no-linealidad.
 
-En conclusión, no se recomienda incluir ninguno de los términos cuadráticos en los modelos. Es importante destacar que, aunque los resultados de los tests no sean significativos, siempre se deben evaluar en conjunto con el contexto del análisis. En este caso, se realizó una inspección visual adicional de la relación entre las variables y el log-odds de la variable respuesta (disponible en el ANEXO, Código 5). Estos gráficos confirman que existe una relación lineal, ya que se observa un patrón lineal sin la presencia de curvas, forma de U u otros patrones no lineales.
+En conclusión, no se recomienda incluir ninguno de los términos cuadráticos en los modelos. Es importante destacar que, aunque los resultados de los tests no sean significativos, siempre se deben evaluar en conjunto con el contexto del análisis. En este caso, se realizó una inspección visual adicional de la relación entre las variables y el log-odds de la variable respuesta (disponible en el ANEXO, Código 6). Estos gráficos confirman que existe una relación lineal, ya que se observa un patrón lineal sin la presencia de curvas, forma de U u otros patrones no lineales.
 
 ```{r}
-# Código 5: variable vs log odds para linealidad del ejercicio 1d
+# Código 6: variable vs log odds para linealidad del ejercicio 1d
 
 # Obtain predicted log odds from the model
 predicted_logodds <- predict(model_simple, type = "link")
@@ -137,10 +163,10 @@ plot(subset_data$REG1B, predicted_logodds, xlab = "age_cat", ylab = "Log Odds", 
 
 ### (e) Predicción de caso
 
-Guardamos los datos del paciente con los valores indicados en el enunciado. Dado que la edad del paciente es de 68 años, esta cae dentro del rango de 66 a 75 años, por lo que se almacena en la variable "age_cat" con dicho rango. El resto de las variables se guardan utilizando los valores numéricos correspondientes. A continuación, aplicamos la función "predict" al modelo reducido utilizando estos datos y especificamos el tipo de respuesta como "response" para obtener la probabilidad con la que el caso ha sido clasificado (Código 6).
+Guardamos los datos del paciente con los valores indicados en el enunciado. Dado que la edad del paciente es de 68 años, esta cae dentro del rango de 66 a 75 años, por lo que se almacena en la variable "age_cat" con dicho rango. El resto de las variables se guardan utilizando los valores numéricos correspondientes. A continuación, aplicamos la función "predict" al modelo reducido utilizando estos datos y especificamos el tipo de respuesta como "response" para obtener la probabilidad con la que el caso ha sido clasificado (Código 7).
 
 ```{r}
-# Código 6: Predicción de caso para el ejercicio 1e
+# Código 7: Predicción de caso para el ejercicio 1e
 
 # Create a new data frame for the new case
 new_case = data.frame(age_cat = "66-75", LYVE1 = 6, REG1B = 140)
@@ -155,10 +181,10 @@ El modelo predice la presencia de adenocarcinoma ductal pancreático con una pro
 
 Es importante tener en cuenta que la extrapolación se produce cuando se realizan predicciones para datos de la variable predictora que se encuentran fuera del rango de los datos utilizados para construir el modelo. En este caso, es necesario considerar que la predicción se basa en los datos y el rango utilizados durante el entrenamiento del modelo, por lo que las predicciones para valores fuera de ese rango pueden ser menos precisas o no reflejar adecuadamente la realidad.
 
-Con el propósito de verificar la idoneidad del modelo, hemos examinado los rangos de las variables LYVE1 y REG1B. En el código implementado, se ha incorporado una comparación automática que determina si los valores pertenecen o no a los rangos establecidos, utilizando un valor booleano. Además, se han generado gráficos que representan los datos utilizados en la construcción del modelo para cada variable, resaltando en color rojo el caso de estudio en cuestión (Código 7).
+Con el propósito de verificar la idoneidad del modelo, hemos examinado los rangos de las variables LYVE1 y REG1B. En el código implementado, se ha incorporado una comparación automática que determina si los valores pertenecen o no a los rangos establecidos, utilizando un valor booleano. Además, se han generado gráficos que representan los datos utilizados en la construcción del modelo para cada variable, resaltando en color rojo el caso de estudio en cuestión (Código 8).
 
 ```{r}
-# Código 7: Comprobación de extrapolación para el caso del ejercicio 1e
+# Código 8: Comprobación de extrapolación para el caso del ejercicio 1e
 
 # Check predictor variable ranges
 range_data <- sapply(subset_data[, c("LYVE1", "REG1B")], range)
@@ -193,10 +219,10 @@ Es relevante destacar que las variables creatinina y TFF1 no han sido incluidas 
 
 # Ejercicio 2
 
-Se procede a realizar la carga de los datos utilizando el código proporcionado en el enunciado. Se ha optado por cambiar los nombres de las variables, ya que la presencia de paréntesis podría ocasionar problemas durante la ejecución del código. A continuación, se lleva a cabo la creación de un data frame que incluye únicamente las variables de interés. Se realiza el proceso de eliminación de valores perdidos y, utilizando el paquete "caret", se procede a la división de los datos en conjuntos de entrenamiento (80%) y prueba (20%).
+Se procede a realizar la carga de los datos utilizando el código proporcionado en el enunciado. Se ha optado por cambiar los nombres de las variables, ya que la presencia de paréntesis podría ocasionar problemas durante la ejecución del código. A continuación, se lleva a cabo la creación de un data frame que incluye únicamente las variables de interés. Se realiza el proceso de eliminación de valores perdidos y, utilizando el paquete "caret", se procede a la división de los datos en conjuntos de entrenamiento (80%) y prueba (20%) (Código 9).
 
 ```{r}
-# Código 8: Carga de datos para el ejercicio 2 y 3
+# Código 9: Carga de datos para el ejercicio 2 y 3
 
 set.seed(123) # Seed is fixed multiple times in the code because it somehow was needed
 
@@ -227,9 +253,11 @@ data.test <- parkinson[-train_indices, ]
 
 ### (a) Regresión lineal
 
-Al no utilizar el factor "sujeto" no tenemos en cuenta las posibles variaciones de cada individuo. Las muestras deberían ser apareadas, ya que se ace un seguimiento a lo largo del tiempo. Una estimación. No sé lo que digo ya lo mirare.
+Se procede al ajuste del modelo lineal con la variable "total_UPDRS" como variable dependiente y las 16 variables indicadas como independientes. Se extrae la R2 y R2 ajustada del modelo. Posteriormente se calculan las predicciones sobre los datos de entrenamiento y prueba separadamente, se calculan los residuos y finalmente el RMSE (Código 10). Se presentan las métricas calculadas en una tabla.
 
 ```{r}
+# Código 10: Ajuste de modelo lineal
+
 # Fit the model
 model_lineal = lm(total_UPDRS ~ ., data = data.train)
 
@@ -264,8 +292,13 @@ results_table <- data.frame(
   Value = c(length(variables), r_squared, adj_r_squared, lineal_rmse_train, lineal_rmse_test)
 )
 
-# Print the result table
-print(results_table)
+
+# Format the table using kable()
+library(knitr)
+formatted_table <- kable(results_table, align = "c", col.names = c("Metric", "Value"), format = "pandoc")
+
+# Print the formatted table
+formatted_table
 cat("Variables usadas en el modelo: ")
 cat(variables, sep=", ")
 
@@ -284,15 +317,29 @@ trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
 robust_lineal_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
 ```
 
-Al no considerar el "sujeto" se viola la suposición de independencia. En este tipo de modelos, se asume que todas las observaciones son independientes. Al no serlo, se construirá un modelo que incluirá métricas erróneas. De manera similar, se pierde precisión al no tener en cuenta la correlación entre los datos. El error estándar de los coeficientes estimados puede subestimarse, dando intervalos de confianza más estrechos.
+La falta de consideración del "sujeto" en el análisis viola la suposición de independencia, la cual es fundamental en este tipo de modelos. Se asume que todas las observaciones son independientes entre sí, y al no cumplirse esta suposición, se construye un modelo que puede generar métricas incorrectas. Además, al no tener en cuenta la correlación entre los datos, se produce una pérdida de precisión. Los coeficientes estimados pueden presentar un error estándar subestimado, lo que resulta en intervalos de confianza más estrechos.
 
-Adicionalmente, se aumenta el error de Tipo 1 (rechazar incorrectamente H0 haciendo que una variable sea significativa cuando no lo es). Esto sucede porque los datos de un mismo individuo tienden a ser más similares, inflando así la significación de los resultados. 
+Otro aspecto a considerar es que la falta de independencia entre las observaciones aumenta el error de Tipo 1, es decir, la probabilidad de rechazar incorrectamente la hipótesis nula y considerar una variable como significativa cuando en realidad no lo es. Esto se debe a que los datos de un mismo individuo tienden a ser más similares, lo que infla la significancia de los resultados.
 
-Finalmente, se hace más complicado detectar las variaciones entre en un mismo individuo. 
+Por último, cabe destacar que se vuelve más complicado detectar las variaciones dentro de un mismo individuo. En este caso, las muestras deberían ser apareadas, ya que se realiza un seguimiento de 42 individuos a lo largo del tiempo.
+
+En relación al modelo construido, se observa que no es adecuado para predecir la puntuación total de UPDRS. Al analizar los valores de R2 y R2 ajustada, se evidencia que son muy bajos (0.1). Estos coeficientes indican la proporción de variabilidad en la variable dependiente que puede ser explicada por el modelo. Un valor de R2 de 0.1 implica que el modelo apenas puede explicar aproximadamente el 10% de la variabilidad observada en la variable dependiente.
+
+El RMSE (Root Mean Square Error), también conocido como error cuadrático medio, es una medida comúnmente utilizada para evaluar la precisión de un modelo de regresión. El RMSE mide la desviación promedio entre los valores predichos por el modelo y los valores reales de la variable dependiente. Es una medida de la dispersión de los errores, por lo que valores más bajos indican una mayor precisión del modelo, mientras que valores más altos indican una mayor dispersión o un mayor error.
+
+En este caso, el RMSE se sitúa alrededor de 10. Esto significa que, en promedio, las predicciones del modelo presentan un error de aproximadamente 10 unidades en la escala de la variable dependiente. Sin embargo, para interpretar si este valor es considerado bueno o malo, es necesario tener en cuenta la escala y la variabilidad inherente de la variable dependiente.
+
+El UPDRS puede tomar valores en el rango de 0 a 159 según la escala de valoración utilizada (fuente: https://getm.sen.es/profesionales/escalas-de-valoracion/26-getm/escalas-de-valoracion/88-unified-parkinson-s-disease-rating-scale-updrs), aunque en nuestros datos solo se observan valores aproximados entre 7 y 55. Un error de 10 unidades en la escala global no representaría un gran error, ya que equivale a un 6% de la escala completa. Sin embargo, dado que nuestros datos se encuentran en el rango de 7 a 55, un error de 10 unidades representa alrededor de un 17% de la escala disponible, lo cual es significativo.
+
+Es importante destacar una limitación inherente al modelo, y es que al haber sido entrenado con datos de pacientes en estadios tempranos de Parkinson (como se refleja en los valores bajos de UPDRS), este modelo solo sería aplicable para este tipo de pacientes. No se puede garantizar la fiabilidad de los resultados al utilizar el modelo en datos fuera del rango de los datos utilizados para su entrenamiento.
+
+Aunque a primera vista el modelo no parece ser robusto, es importante tener en cuenta que los datos provienen de pacientes con Parkinson. Determinar si un error de predicción del 17% es aceptable o no requiere la opinión de profesionales médicos especializados en el manejo de esta enfermedad. Solo los expertos en Parkinson pueden evaluar la magnitud del error en relación con las implicaciones clínicas y la naturaleza de la enfermedad.
 
 ### (b) Regresión lineal con AIC
 
 ```{r}
+# Código 11: Ajuste de regresión lineal por pasos
+
 library(MASS)
 
 set.seed(123)
