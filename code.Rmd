@@ -255,8 +255,10 @@ data.test <- parkinson[-train_indices, ]
 
 Se procede al ajuste del modelo lineal con la variable "total_UPDRS" como variable dependiente y las 16 variables indicadas como independientes. Se extrae la R2 y R2 ajustada del modelo. Posteriormente se calculan las predicciones sobre los datos de entrenamiento y prueba separadamente, se calculan los residuos y finalmente el RMSE (Código 10). Se presentan las métricas calculadas en una tabla.
 
+Es importante resaltar que, a lo largo de este informe, nos referiremos exclusivamente al coeficiente R2 calculado a partir de los datos de entrenamiento y no a partir de los datos de prueba. El cálculo del R2 utilizando los datos de entrenamiento nos proporciona información sobre cómo el modelo se ajusta a los datos utilizados para su entrenamiento. Por otro lado, el cálculo del R2 utilizando los datos de prueba nos brinda una medida de qué tan bien el modelo generaliza y se desempeña en nuevos datos.
+
 ```{r}
-# Código 10: Ajuste de modelo lineal
+# Código 10: Ajuste de modelo lineal, ejercicio 2a
 
 # Fit the model
 model_lineal = lm(total_UPDRS ~ ., data = data.train)
@@ -273,9 +275,8 @@ predictions_train = predict(model_lineal, data.train)
 predictions_test <- predict(model_lineal, data.test)
 
 # Calculate residuals train
-residuals_train = data.train$total_UPDRS - predictions_train
-# Calculate residuals test
-residuals_test <- data.test$total_UPDRS - predictions_test
+residuals_train <- predictions_train - data.train$total_UPDRS
+residuals_test <- predictions_test - data.test$total_UPDRS
 
 # Calculate RMSE train
 lineal_rmse_train = sqrt(mean(residuals_train^2))
@@ -291,7 +292,6 @@ results_table <- data.frame(
   Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
   Value = c(length(variables), r_squared, adj_r_squared, lineal_rmse_train, lineal_rmse_test)
 )
-
 
 # Format the table using kable()
 library(knitr)
@@ -337,8 +337,10 @@ Aunque a primera vista el modelo no parece ser robusto, es importante tener en c
 
 ### (b) Regresión lineal con AIC
 
+Utilizando el modelo lineal ajustado previamente en la sección anterior, se aplicó el procedimiento de "stepAIC" para seleccionar de manera automatizada las variables que mejor se ajustan al modelo (Código 11). Al especificar la dirección "both", el procedimiento considerará agregar o eliminar variables en busca de un modelo con un ajuste óptimo. Esta selección se basa en el criterio del valor del AIC, buscando minimizarlo, ya que este valor proporciona una medida del ajuste del modelo teniendo en cuenta su complejidad.
+
 ```{r}
-# Código 11: Ajuste de regresión lineal por pasos
+# Código 11: Ajuste de regresión lineal por pasos para el ejercicio 2b
 
 library(MASS)
 
@@ -359,9 +361,8 @@ predictions_train = predict(model_stepwise, data.train)
 predictions_test <- predict(model_stepwise, data.test)
 
 # Calculate residuals
-residuals_train = data.train$total_UPDRS - predictions_train
-# Calculate residuals
-residuals_test <- data.test$total_UPDRS - predictions_test
+residuals_train <- predictions_train - data.train$total_UPDRS
+residuals_test <- predictions_test - data.test$total_UPDRS
 
 # Calculate RMSE train
 step_rmse_train = sqrt(mean(residuals_train^2))
@@ -378,8 +379,12 @@ results_table <- data.frame(
   Value = c(length(variables), r_squared, adj_r_squared, step_rmse_train, step_rmse_test)
 )
 
-# Print the result table
-print(results_table)
+# Format the table using kable()
+library(knitr)
+formatted_table <- kable(results_table, align = "c", col.names = c("Metric", "Value"), format = "pandoc")
+
+# Print the formatted table
+formatted_table
 cat("Variables usadas en el modelo: ")
 cat(variables, sep=", ")
 
@@ -397,19 +402,22 @@ trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
 # Calculate the robust RMSE using the trimmed mean:
 robust_step_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
 ```
-Removing a variable solely based on its lack of significance may affect the overall fit of the model and the relationships between other variables. A variable that is not individually significant may contribute to the model's overall predictive power when combined with other variables or interacted with other predictors. Therefore, it's crucial to assess the model's overall performance, such as through measures like R-squared or adjusted R-squared, and consider the context and theoretical significance of the variables
 
-The significance of a variable can be influenced by multicollinearity, which occurs when predictor variables are highly correlated with each other. In the presence of multicollinearity, the individual coefficients and their significance can be unstable or misleading. It's important to check for multicollinearity among the variables and consider its potential impact on the significance of individual predictors.
+Se observa que, a pesar de la selección paso a paso de variables utilizando el criterio del AIC, el modelo no ha mejorado su ajuste. Aunque ahora se utilicen solo 11 variables en lugar de las 16 originales, lo cual simplifica el modelo, los demás parámetros indican que el modelo aún no es satisfactorio. Como se ha mencionado anteriormente, cuando el modelo presenta valores bajos de R-cuadrado y un alto RMSE, esto indica que el modelo no se ajusta adecuadamente a los datos. Un R-cuadrado bajo implica que el modelo no puede explicar gran parte de la variabilidad en los datos, mientras que un RMSE alto indica que las predicciones del modelo difieren significativamente de los valores reales.
 
-In this example, model_linear is the initial linear regression model you built using all the variables of interest. The stepAIC() function from the MASS package is used to perform the stepwise variable selection based on AIC.
-
-The direction argument specifies the direction of the stepwise procedure. "both" allows variables to be added or removed from the model. Other options include "backward" for variable removal only and "forward" for variable addition only.
+Para mejorar el modelo, se pueden considerar diversas alternativas. Una opción consiste en recopilar más datos con el fin de aumentar el tamaño y la representatividad de la muestra. También se podría explorar la inclusión de variables adicionales que puedan capturar más información relevante. Otra opción es utilizar técnicas de modelado más avanzadas, como regresión no lineal o modelos de aprendizaje automático, que son capaces de capturar relaciones más complejas entre las variables. Estas estrategias podrían contribuir a mejorar el ajuste y la precisión del modelo, permitiendo obtener predicciones más confiables y útiles.
 
 ### (c) Regresión por componentes principales
 
-Performing regression using principal components involves transforming the predictor variables into a set of principal components and then using these components as predictors in the regression model.
+La regresión por componentes principales (PCA, por sus siglas en inglés) es una técnica utilizada para reducir la dimensionalidad de un conjunto de datos. Su objetivo principal es encontrar un conjunto de nuevas variables llamadas componentes principales, que son combinaciones lineales de las variables originales, de modo que retengan la mayor cantidad posible de información en menos dimensiones.
+
+Creamos una regresión por componentes principales usando la función "pcr", especificamos que queremos realizar una validación cruzada. A continuación calculamos los RMSEP sobre cada uno de los modelos (cada modelo tiene un número de componentes distinto, de 0 a 16), con éstos realizamos un gráfico y escogemos el menor valor que sea razonable. Así determinamos el número de componentes óptimos (Código 12). 
+
+En resumen, este código ajusta un modelo de regresión por componentes principales, evalúa su rendimiento mediante la validación cruzada y encuentra el número óptimo de componentes que minimiza el error de predicción.
 
 ```{r}
+# Código 12: Regresión por componentes principales para el ejercicio 2c
+
 # install.packages('pls')
 library(pls)
 
@@ -428,38 +436,35 @@ plot(mpcCV$comp, rmse_values, type = "b", xlab = "Number of Components", ylab = 
 optimal_components <- mpcCV$comp[which.min(rmse_values)]
 points(optimal_components, min(rmse_values), col = "red", pch = 16)
 text(optimal_components, min(rmse_values), paste("Optimal:", optimal_components), pos = 3)
+
+optimal_components = optimal_components - 1 # Substract the intercept 
 ```
-El minimo absoluto es 11 pero el minimo razonable sin hacerlo muy complejo es 8 -1 = 7
 
-In the code you provided, the line (numpredcp <- which.min(mpcCV$val)) is used to find the number of principal components that minimizes the cross-validated RMSEP (mpcCV$val). This line calculates the RMSEP for different numbers of components using cross-validation and then identifies the index of the minimum value using the which.min function.
+En este caso, podemos observar que el número mínimo de componentes es 8, aunque como en los resultados se muestra el intercepto, hay que restarle 1, por lo tanto son 7.
 
-The code performs principal component analysis (PCA) on the predictor variables using the prcomp() function. The resulting principal components (pcs) are then used to construct regression models with different numbers of components (ranging from 1 to the total number of components).
-
-For each model, the code predicts the outcome variable on the test data, calculates the residuals, and computes the root mean squared error (RMSE). The RMSE values are stored in the rmse_values vector.
-
-The code then plots the RMSE values against the number of components to visualize the relationship. The number of components that yields the minimum RMSE is identified, and the corresponding results are printed.
-
-Yes, in general, a lower RMSE indicates a better-fitting model. RMSE (Root Mean Squared Error) is a commonly used measure of the average prediction error of a regression model. It represents the square root of the average squared differences between the predicted values and the actual values of the outcome variable.
-
-Since RMSE measures the magnitude of the prediction errors, a smaller RMSE implies that the model's predictions are, on average, closer to the actual values. 
+A continuación se calculan las métricas con el número de componentes óptimos (Código 13).
 
 ```{r}
+# Código 13: Cálculo de métricas para el modelo por PCA, ejercicio 2c
+
 # Predict on the training data using the model
-predictions_train <- predict(PCA_model, data.train, ncomp = optimal_components-1)
+predictions_train <- predict(PCA_model, data.train, ncomp = optimal_components)
 # Predict on the test data using the model
-predictions_test <- predict(PCA_model, data.test, ncomp = optimal_components-1)
+predictions_test <- predict(PCA_model, data.test, ncomp = optimal_components)
   
 # Calculate residuals for training and test data
-residuals_train <- data.train$total_UPDRS - predictions_train
-residuals_test <- data.test$total_UPDRS - predictions_test
+residuals_train <- predictions_train - data.train$total_UPDRS
+residuals_test <- predictions_test - data.test$total_UPDRS
 
 # Calculate R-squared for training data
-r2_train <- 1 - sum(residuals_train^2) / sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
+SSR <- sum((predictions_train - mean(data.train$total_UPDRS))^2)
+SST <- sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
+r2_train <- 1 - SSR/SST
 
 # Calculate adjusted R-squared for training data
-n_train <- nrow(data.train)
-p_train <- optimal_components - 1  # Number of predictors (components) used
-r2_adj_train <- 1 - (1 - r2_train) * ((n_train - 1) / (n_train - p_train - 1))
+n <- nrow(data.train)
+p <- length(coef(mr))
+r2_adj_train <- 1 - (1 - r2_train) * (n - 1) / (n - p - 1)
   
 # Calculate RMSE for training data
 PCA_rmse_train <- sqrt(mean(residuals_train^2))
@@ -469,13 +474,15 @@ PCA_rmse_test <- sqrt(mean(residuals_test^2))
 # Create a data frame for the results
 results_table <- data.frame(
   Metric = c("Número de componentes", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
-  Value = c((optimal_components - 1), r2_train, r2_adj_train, PCA_rmse_train, PCA_rmse_test)
+  Value = c((optimal_components), r2_train, r2_adj_train, PCA_rmse_train, PCA_rmse_test)
 )
 
-# Print the result table
-print(results_table)
-cat("Variables usadas en el modelo: ")
-cat(variables, sep=", ")
+# Format the table using kable()
+library(knitr)
+formatted_table <- kable(results_table, align = "c", col.names = c("Metric", "Value"), format = "pandoc")
+
+# Print the formatted table
+formatted_table
 
 # Robust RMSE for ex3
 # Number of observations to trim
@@ -492,40 +499,51 @@ trimmed_squared_residuals_best <- (trimmed_residuals_best - trimmed_mean_best)^2
 robust_PCA_rmse_test <- sqrt(mean(trimmed_squared_residuals_best))
 ```
 
-Nota: el mejor modelo según el RMSEP con CV, que no se que es.
+Basado en los resultados obtenidos, se puede concluir que el modelo ajustado utilizando PCA no logra un buen ajuste ni una buena capacidad predictiva para el conjunto de datos utilizado. Esto se refleja en los valores bajos de R2 y los altos valores de RMSE. Estos indicadores sugieren que el modelo no captura de manera adecuada la variabilidad de la variable objetivo y presenta un nivel significativo de error en las predicciones. Por lo tanto, se recomienda explorar otras técnicas de modelado y considerar diferentes variables o enfoques para obtener un mejor rendimiento y una mayor precisión en las predicciones.
 
 ### (d) Ridge regression
 
-Ridge regression is a model tuning method that is used to analyse any data that suffers from multicollinearity. This method performs L2 regularization. When the issue of multicollinearity occurs, least-squares are unbiased, and variances are large, this results in predicted values being far away from the actual values.
+La regresión de Ridge es un método de regresión regularizada que se utiliza para abordar el problema de multicolinealidad en modelos de regresión lineal. La multicolinealidad se produce cuando hay una alta correlación entre las variables predictoras, lo que puede afectar negativamente la precisión de los coeficientes estimados.
 
-Yes, you can adjust the model using Ridge regression. Ridge regression is a regularization technique that introduces a penalty term to the least squares objective function, helping to reduce the impact of multicollinearity and potentially improve the model's performance.
+En la regresión de Ridge, se introduce una penalización de L2 a la función objetivo, que se suma a la suma de los cuadrados de los errores. Esta penalización restringe los coeficientes estimados, haciendo que sean más pequeños en magnitud. Esto ayuda a reducir la influencia de las variables predictoras altamente correlacionadas y evita la amplificación de errores debido a la multicolinealidad.
+
+En el siguiente código se determina el mejor valor de lambda de 0 a 0.1 mediante validación cruzada, esta es una técnica común en estadística. Una vez determinado el mejor valor de lambda se ajusta nuevamente una regresión Ridge con este valor (Código 14).
 
 ```{r}
+# Código 14: Ajuste de un modelo de regresión Ridge, ejercicio 2d
+
 library(MASS)
 
 set.seed(123)
 
-mr <- lm.ridge(total_UPDRS ~ ., data = data.train, lambda=(seq(0, 0.1, 0.001)))
-(nGCV <- which.min(mr$GCV))
+# Perform Ridge Regression with a range of lambda values
+mr <- lm.ridge(total_UPDRS ~ ., data = data.train, lambda = seq(0, 0.1, 0.001))
 
+# Find the index of the lambda value that minimizes the GCV score
+nGCV <- which.min(mr$GCV)
+
+# Retrieve the lambda value that minimizes the GCV score
 lGCV <- mr$lambda[nGCV]
-matplot(mr$lambda,coef(mr),type="l", ylim=c(-2,2), xlab=expression(lambda),ylab=expression(hat(beta[i])))
-abline(v=lGCV,col=2)
 
-plot(mr$lambda,mr$GCV,type="l",xlab=expression(lambda),ylab="GCV")
-abline(v=lGCV,col=2)
+# Visualize the GCV scores as a function of lambda
+plot(mr$lambda, mr$GCV, type = "l", xlab = expression(lambda), ylab = "GCV")
 
-mr <- lm.ridge(total_UPDRS ~ ., data = data.train, lambda=lGCV)
-```
+# Add a vertical line at the lambda value that minimizes the GCV score
+abline(v = lGCV, col = 2)
 
-```{r}
+# Print the lambda value that minimizes the GCV score
+cat("Mejor lambda: ", lGCV)
+
+# Refit the Ridge Regression model using the optimal lambda value
+mr <- lm.ridge(total_UPDRS ~ ., data = data.train, lambda = lGCV)
+
 # Make predictions (no y this time)
 predictions_test = cbind(1,as.matrix(data.test[,-1])) %*% coef(mr)
 predictions_train = cbind(1,as.matrix(data.train[,-1])) %*% coef(mr)
 
 # Calculate residuals for training and test data
-residuals_train <- data.train$total_UPDRS - predictions_train
-residuals_test <- data.test$total_UPDRS - predictions_test
+residuals_train <- predictions_train - data.train$total_UPDRS
+residuals_test <- predictions_test - data.test$total_UPDRS
 
 # Calculate R-squared for training data
 r2_train <- 1 - sum(residuals_train^2) / sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
@@ -541,17 +559,21 @@ ridge_rmse_train <- sqrt(mean(residuals_train^2))
 ridge_rmse_test <- sqrt(mean(residuals_test^2))
 
 # Extract the variable names
-variables <- colnames(data.test[,-1])
+variables <- names(coef(mr))
 
 # Create a data frame for the results
 results_table <- data.frame(
   Metric = c("Número de componentes", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE_test"),
-  Value = c((optimal_components - 1), r2_train, r2_adj_train, ridge_rmse_train, ridge_rmse_test)
+  Value = c((length(variables) -1), r2_train, r2_adj_train, ridge_rmse_train, ridge_rmse_test)
 )
 
-# Print the result table
-print(results_table)
-cat("Variables usadas en el modelo: ")
+# Format the table using kable()
+library(knitr)
+formatted_table <- kable(results_table, align = "c", col.names = c("Metric", "Value"), format = "pandoc")
+
+# Print the formatted table
+formatted_table
+cat("\n Variables usadas en el modelo: ")
 cat(variables, sep=", ")
 
 # Robust RMSE for ex 3
@@ -569,27 +591,37 @@ trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
 robust_ridge_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
 ```
 
+Basado en los resultados obtenidos, se puede concluir que el modelo ajustado utilizando Ridge Regression no logra un buen ajuste y presenta un rendimiento predictivo deficiente para el conjunto de datos utilizado. Esto se evidencia por los valores bajos de R2 y los altos valores de RMSE.
 
-In the context of ridge regression, lambda (λ) is a regularization parameter that controls the amount of shrinkage applied to the regression coefficients. It is also referred to as the penalty parameter or the tuning parameter.
-
-
-Ridge regression is a technique used to address the issue of multicollinearity (high correlation) among predictor variables in a regression model. When multicollinearity is present, the ordinary least squares (OLS) estimates become unstable, leading to overfitting and unreliable coefficient estimates.
-
-Lambda plays a crucial role in ridge regression by introducing a penalty term to the loss function that the model tries to minimize. The penalty term is proportional to the square of the magnitude of the coefficients. By increasing the value of lambda, the ridge regression model imposes a stronger penalty, shrinking the coefficient estimates towards zero.
-
-By tuning the value of lambda, you can control the degree of shrinkage applied to the coefficients. A larger lambda value corresponds to stronger regularization and more pronounced shrinkage of the coefficients. Conversely, a smaller lambda value reduces the amount of shrinkage and allows the model to closely approximate the OLS estimates.
+En conjunto, estos resultados sugieren que el modelo de Ridge Regression no es capaz de capturar la relación adecuada entre las variables predictoras y la variable objetivo en el conjunto de datos utilizado. Es posible que se requieran ajustes adicionales, como la selección de variables más relevantes, la exploración de diferentes transformaciones de variables o la consideración de otros modelos más adecuados para mejorar el rendimiento y la precisión de las predicciones.
 
 ### (e) motor_UPDRS como respuesta
 
-A value of "0.1" for both R2 and R2 adjusted means that the predictors included in the model explain approximately 10% of the variance in the dependent variable. This indicates a relatively weak relationship between the predictors and the response variable. Keep in mind that the interpretation of the R2 and R2 adjusted values depends on the specific context and the nature of the data being modeled.
+Dada la falta de ajuste y la baja capacidad predictiva de los modelos anteriores, incluyendo el modelo de Regresión Ridge, sí es conveniente considerar la posibilidad de ajustar el modelo utilizando la variable de respuesta alternativa disponible, "motor_UPDRS".
 
-Yo diria que si porque es puta mierda. No cumpliria el objetivo principal: El principal objetivo es predecir el UPDRS total a partir de las 16 medidas de voz. Pero esque este tampoco lo hace porque es basssurrra.
+La inclusión de la variable "motor_UPDRS" como nueva variable de respuesta permitirá investigar si el modelo puede lograr un mejor ajuste y una mayor precisión predictiva en comparación con los modelos anteriores. Esto resulta especialmente relevante si existe una relación más fuerte o significativa entre las variables predictoras (medidas de voz biométricas) y la variable "motor_UPDRS".
+
+En resumen, dada la falta de ajuste y la baja capacidad predictiva de los modelos anteriores, es recomendable explorar la opción de ajustar el modelo utilizando la variable de respuesta "motor_UPDRS". Esto permitirá evaluar si esta variable puede ser mejor pronosticada por las variables predictoras disponibles. Si bien esto no cumpliría el objetivo principal de los modelos de regresión ajustados previamente, que era predecir el UPDRS total utilizando las 16 medidas de voz, vale la pena intentarlo con la variable "motor_UPDRS" para obtener información relevante sobre su capacidad de predicción.
 
 ### (f) Análisis de residuos
 
-In statistics, ordinary least squares (OLS) is a type of linear least squares method for choosing the unknown parameters in a linear regression model (with fixed level-one effects of a linear function of a set of explanatory variables) by the principle of least squares: minimizing the sum of the squares of the differences between the observed dependent variable (values of the variable being observed) in the input dataset and the output of the (linear) function of the independent variable. 
+Las principales suposiciones del modelo de regresión de Mínimos Cuadrados Ordinarios (OLS) son las siguientes: linealidad, independencia, homocedasticidad, ausencia de multicolinealidad y normalidad.
+
+Con el fin de evaluar la adecuación de los datos para un modelo lineal, se realizaron los siguientes gráficos (Código 15):
+
+  - Residuals vs. Fitted (which = 1): Se busca examinar la **linealidad**, observando si los valores residuales se distribuyen alrededor de cero. En general, se cumple la suposición de linealidad, aunque se observan algunos valores extremos que se alejan de cero.
+  
+  - Normal Q-Q plot (which = 2): Permite evaluar la **normalidad**, verificando si los valores se alinean con la recta. Aunque no se ajustan perfectamente a la recta de referencia, en general se puede decir que se cumple la suposición de normalidad.
+  
+  - Scale-Location plot (which = 3): Sirve para evaluar la **homocedasticidad**, buscando que los datos se distribuyan de manera equitativa sin que la dispersión varíe. Al no observarse una forma de cono en los datos, se puede concluir que se cumple la suposición de homocedasticidad.
+  
+  - Cook's distance plot (which = 4): Se utiliza para identificar puntos influyentes. Se observa que hay tres puntos con valores de distancia de Cook superiores al resto. Sin embargo, ninguno de ellos presenta valores mayores a 1, que es el umbral comúnmente utilizado para determinar la influencia de los puntos.
+  
+  - Residuals vs. Leverage plot (which = 5): ambién se utiliza para identificar puntos influyentes, y los mismos tres puntos mencionados anteriormente son marcados como los más influyentes.
 
 ```{r}
+# Código 15: Análisis de asunciones, ejercicio 2f
+
 # Residual plot
 plot(model_lineal, which = 1)
 
@@ -605,15 +637,12 @@ plot(model_lineal, which = 4)
 # Residuals vs. fitted values plot
 plot(model_lineal, which = 5)
 ```
-    which = 1: Residuals vs. Fitted: Alrededor de 0, mas o menos lineal
-    which = 2: Normal Q-Q plot: No son muy normal en linea recta
-    which = 3: Scale-Location plot: homocedasticidad mas o menos, no es cono
-    which = 4: Cook's distance plot: NO Hay puntos influyentes. Más grande cook más influye. Más 1 es influyente
-    which = 5: Residuals vs. Leverage plot: No Existen puntos influyentes
 
-Multicollinearity refers to a situation where independent variables in a regression model are highly correlated with each other. It can cause issues in the interpretation of coefficients and affect the stability and reliability of the regression model. To study multicollinearity in R, you can use the following approaches:
+Para evaluar la presencia de multicolinealidad, se realizó el cálculo de una matriz de correlación, así como la obtención de los valores de VIF (Factor de Inflación de la Varianza) y los valores de tolerancia (Código 16).
 
 ```{r}
+# Código 16: Estudio de correlación, ejercicio 2f
+
 cor_matrix <- cor(data.train[, c("Jitter_p","Jitter_Abs","Jitter_RAP","Jitter_PPQ5","Jitter_DDP",
 "Shimmer","Shimmer_dB","Shimmer_APQ3","Shimmer_APQ5","Shimmer_APQ11", "Shimmer_DDA","NHR","HNR","RPDE","DFA","PPE")])
 
@@ -635,29 +664,37 @@ results_cor <- data.frame(
   Tolerance = tolerance_values
 )
 
-print(results_cor)
+# Format the table using kable()
+library(knitr)
+formatted_table <- kable(results_cor, align = "c", col.names = c("VIF", "Tolerancia"), format = "pandoc")
+
+# Print the formatted table
+formatted_table
 ```
 
-Todos los tipos de Jitter están muy relacionados con todos los tipos de Jitter y los Shimmer con los Shimmer.Osea mucho kek. Normal que el modelo se una basurrra.
+El análisis de la matriz de correlación reveló que la mayoría de los tipos de Jitter y Shimmer muestran una correlación significativa entre ellos. Además, se observó una correlación negativa entre el HNR y Shimmer.
 
-Tolerance is the reciprocal of the VIF. It indicates the proportion of variance in an independent variable that is not explained by other independent variables. Variables with low tolerance values (close to 0) indicate high multicollinearity.
+El valor de VIF proporciona información sobre el grado en que la varianza de un coeficiente de regresión se ve inflada debido a la correlación lineal con otras variables independientes. En general, se considera que existe una correlación problemática entre las variables independientes cuando el valor del VIF es mayor a 1, y especialmente cuando supera un umbral de 5 o 10. Por otro lado, la tolerancia se calcula como "Tolerancia = 1 / VIF" y varía entre 0 y 1. Un valor cercano a 1 indica poca multicolinealidad, mientras que un valor cercano a 0 indica una alta multicolinealidad.
 
-The VIF measures how much the variance of the estimated regression coefficient is inflated due to multicollinearity.
+En este caso, se observaron valores extremadamente altos de VIF, lo que indica una grave presencia de multicolinealidad entre las variables. Asimismo, se encontraron valores muy bajos de tolerancia para la mayoría de las variables.
+
+Adicionalmente, se examinó la correlación entre los residuos consecutivos (Código 17). Aunque no se consideró en el presente análisis, es importante mencionar que los datos corresponden a mediciones en el tiempo de los mismos 42 individuos. El gráfico mostrado a continuación nos ayuda a identificar la presencia de autocorrelación o correlación temporal.
 
 ```{r}
+# Código 17: Correlación entre residuos, ejercicio 2f
+
 # Calculate residuals
 residuals <- residuals(model_lineal)
 
 # Plot residuals
 plot(residuals[-length(residuals)], residuals[-1], xlab = "Residual i", ylab = "Residual i+1", main = "Correlation between residuals")
-
 ```
 
-If your data is randomly ordered and does not have a time component, then the concept of "consecutive residuals" in the temporal sense may not be directly applicable. The assumption of independence between residuals in linear regression typically assumes that the order of the data points does not matter, as long as the observations are independent and identically distributed.
+En el gráfico presentado, se observa una clara relación lineal positiva, lo que indica que los residuos en un momento dado están correlacionados positivamente con los residuos en el siguiente momento. En otras palabras, si un residuo es mayor de lo esperado, es probable que el residuo siguiente también sea mayor de lo esperado, y si un residuo es menor de lo esperado, el residuo siguiente tiende a ser menor de lo esperado.
 
-In this case, you can still check for correlation between the residuals, but the interpretation would be different. Instead of investigating temporal dependence, you would be examining whether there is a pattern or relationship between the residuals regardless of their order. The correlation between residuals can provide insights into potential systematic patterns or relationships in the errors that may affect the validity of your linear model.
+Esta correlación positiva entre los residuos consecutivos señala la presencia de autocorrelación en los residuos del modelo de regresión.
 
-Therefore, while the concept of consecutive residuals in a temporal sense may not be relevant to your randomly ordered data, you can still use the code you provided to check for correlation between the residuals and investigate whether there are correlated errors present in your linear model.
+En vista de estos resultados, resultaría interesante considerar la inclusión del factor sujeto en el modelo, ya que podría ser la causa del bajo valor predictivo observado. Además, la incorporación de variables adicionales con una menor correlación entre sí podría ser beneficioso. Sería oportuno explorar la inclusión de diferentes tipos de mediciones de voz u otros parámetros que puedan contribuir a la predicción más precisa de la puntuación total de UPDRS.
 
 # Ejercicio 3
 
