@@ -700,7 +700,11 @@ En vista de estos resultados, resultaría interesante considerar la inclusión d
 
 ### (a) Comparación modelos con y sin puntos influyentes
 
+Dadas las limitaciones identificadas en los modelos del ejercicio anterior, se ha procedido a eliminar los 3 puntos más influyentes, determinados mediante el cálculo de la distancia de Cook, del modelo lineal. Posteriormente, se ha vuelto a ejecutar el mismo código utilizado previamente, utilizando los nuevos datos resultantes de la eliminación de los puntos influyentes.
+
 ```{r}
+# Código 18: Eliminación de puntos influyentes
+
 # Calculate cooks distance
 cooksd <- cooks.distance(model_lineal)
 
@@ -729,9 +733,8 @@ predictions_train = predict(model_lineal, data.train)
 predictions_test <- predict(model_lineal, data.test)
 
 # Calculate residuals train
-residuals_train = data.train$total_UPDRS - predictions_train
-# Calculate residuals test
-residuals_test <- data.test$total_UPDRS - predictions_test
+residuals_train <- predictions_train - data.train$total_UPDRS
+residuals_test <- predictions_test - data.test$total_UPDRS
 
 # Calculate RMSE train
 lineal_rmse_train = sqrt(mean(residuals_train^2))
@@ -744,14 +747,9 @@ variables <- names(coef(model_lineal))[-1]
 
 # Create a data frame for the results
 results_table <- data.frame(
-  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "clean_rmse_test"),
+  Metric = c("Número de variables", "R-squared", "Adjusted R-squared", "RMSE_train", "RMSE test"),
   Value = c(length(variables), r_squared, adj_r_squared, lineal_rmse_train, lineal_clean_rmse_test)
 )
-
-# Print the result table
-print(results_table)
-cat("Variables usadas en el modelo: ")
-cat(variables, sep=", ")
 
 # Robust RMSE for exercise 3
 # Number of observations to trim
@@ -787,10 +785,9 @@ predictions_train = predict(model_stepwise, data.train)
 # Predict on the test data
 predictions_test <- predict(model_stepwise, data.test)
 
-# Calculate residuals
-residuals_train = data.train$total_UPDRS - predictions_train
-# Calculate residuals
-residuals_test <- data.test$total_UPDRS - predictions_test
+# Calculate residuals train
+residuals_train <- predictions_train - data.train$total_UPDRS
+residuals_test <- predictions_test - data.test$total_UPDRS
 
 # Calculate RMSE train
 step_rmse_train = sqrt(mean(residuals_train^2))
@@ -807,11 +804,6 @@ results_table <- data.frame(
   Value = c(length(variables), r_squared, adj_r_squared, step_rmse_train, step_clean_rmse_test)
 )
 
-# Print the result table
-print(results_table)
-cat("Variables usadas en el modelo: ")
-cat(variables, sep=", ")
-
 # Robust RMSE
 # Number of observations to trim
 n_trim <- round(0.1 * length(residuals_test))
@@ -825,8 +817,6 @@ trimmed_mean_test <- mean(trimmed_residuals_test)
 trimmed_squared_residuals_test <- (trimmed_residuals_test - trimmed_mean_test)^2
 # Calculate the robust RMSE using the trimmed mean:
 robust_step_clean_rmse_test <- sqrt(mean(trimmed_squared_residuals_test))
-
-mean(residuals_test, trim=0.1)
 ```
 ______________________________________________________________________
 ```{r}
@@ -848,6 +838,8 @@ plot(mpcCV$comp, rmse_values, type = "b", xlab = "Number of Components", ylab = 
 optimal_components <- mpcCV$comp[which.min(rmse_values)]
 points(optimal_components, min(rmse_values), col = "red", pch = 16)
 text(optimal_components, min(rmse_values), paste("Optimal:", optimal_components), pos = 3)
+
+optimal_components = optimal_components - 1
 ```
 ```{r}
 # Predict on the training data using the model
@@ -856,8 +848,8 @@ predictions_train <- predict(PCA_model, data.train, ncomp = optimal_components-1
 predictions_test <- predict(PCA_model, data.test, ncomp = optimal_components-1)
   
 # Calculate residuals for training and test data
-residuals_train <- data.train$total_UPDRS - predictions_train
-residuals_test <- data.test$total_UPDRS - predictions_test
+residuals_train <- predictions_train - data.train$total_UPDRS
+residuals_test <- predictions_test - data.test$total_UPDRS
 
 # Calculate R-squared for training data
 r2_train <- 1 - sum(residuals_train^2) / sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
@@ -878,10 +870,6 @@ results_table <- data.frame(
   Value = c((optimal_components - 1), r2_train, r2_adj_train, PCA_rmse_train, PCA_clean_rmse_test)
 )
 
-# Print the result table
-print(results_table)
-cat("Variables usadas en el modelo: ")
-cat(variables, sep=", ")
 
 # Robust RMSE for ex3
 # Number of observations to trim
@@ -921,8 +909,8 @@ predictions_test = cbind(1,as.matrix(data.test[,-1])) %*% coef(mr)
 predictions_train = cbind(1,as.matrix(data.train[,-1])) %*% coef(mr)
 
 # Calculate residuals for training and test data
-residuals_train <- data.train$total_UPDRS - predictions_train
-residuals_test <- data.test$total_UPDRS - predictions_test
+residuals_train <- predictions_train - data.train$total_UPDRS
+residuals_test <- predictions_test - data.test$total_UPDRS
 
 # Calculate R-squared for training data
 r2_train <- 1 - sum(residuals_train^2) / sum((data.train$total_UPDRS - mean(data.train$total_UPDRS))^2)
@@ -945,11 +933,6 @@ results_table <- data.frame(
   Metric = c("Número de componentes", "R-squared", "Adjusted R-squared", "RMSE_train", "clean_rmse_test"),
   Value = c((optimal_components - 1), r2_train, r2_adj_train, ridge_rmse_train, ridge_clean_rmse_test)
 )
-
-# Print the result table
-print(results_table)
-cat("Variables usadas en el modelo: ")
-cat(variables, sep=", ")
 
 # Robust RMSE for ex 3
 # Number of observations to trim
@@ -977,19 +960,13 @@ results <- data.frame(
 print(results)
 ```
 
-```{r}
-# Checking if the points were correctly deleted
-# Re-calculate cooks distance
-cooksd_updated <- cooks.distance(model_lineal) # Clean data
+Como se observa en la tabla de resultados, el valor del RMSE apenas experimenta cambios significativos tras la eliminación de los tres puntos más influyentes. Solo en el modelo basado en el análisis de componentes principales se aprecia una ligera mejora en el RMSE, aunque la diferencia es tan mínima que no puede considerarse como una mejora sustancial en el ajuste del modelo.
 
-# Plot both
-plot(cooksd_updated, pch = 20, cex = 1.5, main = "Cook's Distance Plot Updated")
-plot(cooksd, pch = 20, cex = 1.5, main = "Cook's Distance Plot")
-```
+En resumen, la falta de mejora o incluso el empeoramiento del RMSE después de eliminar los puntos influyentes puede deberse a diversas razones, como una identificación incorrecta de los puntos influyentes, la eliminación de información valiosa o un sesgo en las predicciones debido a la distribución de los puntos influyentes. Es fundamental tener en cuenta estos factores y evaluar el impacto de la eliminación de los puntos influyentes en el contexto específico de nuestros modelos y conjunto de datos.
 
 ### (b) Cálculo del RMSE robusto
 
-The trimmed mean is less sensitive to outliers and can provide a more robust estimate of the central tendency.
+A diferencia del cálculo tradicional del RMSE que utiliza todos los puntos de datos, el RMSE robusto con media recortada al 10% elimina una fracción de los valores atípicos más extremos antes de calcular el error. Al emplear esta técnica, el RMSE robusto con media recortada al 10% se vuelve menos sensible a los valores atípicos y proporciona una medida más robusta del error. Esta medida resulta útil cuando se sospecha la presencia de valores atípicos en el conjunto de datos, los cuales podrían tener un impacto desproporcionado en la estimación del error.
 
 ```{r}
 # Create a data frame for the results
@@ -997,16 +974,25 @@ results2 <- data.frame(
   Modelo = c("OLS", "AIC", "RCP", "Ridge"),
   RMSE_Con = c(lineal_rmse_test, step_rmse_test, PCA_rmse_test, ridge_rmse_test),
   RMSE_Sin = c(lineal_clean_rmse_test, step_clean_rmse_test, PCA_clean_rmse_test, ridge_clean_rmse_test),
-  Robusto_Con = c(robust_lineal_rmse_test, robust_step_rmse_test, robust_PCA_rmse_test, robust_ridge_rmse_test),
-  Robusto_Sin = c(robust_lineal_clean_rmse_test, robust_step_clean_rmse_test, robust_PCA_clean_rmse_test, robust_ridge_clean_rmse_test)
+  RMSE_Robusto_Con = c(robust_lineal_rmse_test, robust_step_rmse_test, robust_PCA_rmse_test, robust_ridge_rmse_test),
+  RMSE_Robusto_Sin = c(robust_lineal_clean_rmse_test, robust_step_clean_rmse_test, robust_PCA_clean_rmse_test, robust_ridge_clean_rmse_test)
 )
 
 print(results2)
 ```
 
+Como se puede apreciar, en todos los casos se observa una reducción aproximada de 3 unidades del RMSE al calcularlo con la media recortada. La diferencia en el RMSE entre los dos enfoques de cálculo puede atribuirse a la influencia de los valores atípicos en el cálculo del error. Al utilizar la media recortada, se eliminan los valores extremos, lo que puede disminuir la influencia de dichos puntos atípicos en la estimación del error cuadrático medio.
+
+Dado que no se observan diferencias significativas en el RMSE robusto al considerar o no los valores atípicos, sería recomendable realizar una revisión y limpieza más exhaustiva de los datos, ya que la eliminación de tan solo tres puntos no genera cambios significativos.
+
+Otra opción a considerar sería la transformación de variables, ya que ciertas transformaciones podrían ayudar a reducir la influencia de los valores atípicos. También se podría contemplar el uso de métodos robustos de regresión, los cuales son menos sensibles a los valores atípicos.
+
 ### (c) LTS o Huber
 
+La regresión Huber es un método robusto utilizado para ajustar modelos de regresión que son menos sensibles a los valores atípicos o a los errores no normales presentes en los datos (Código 18). Este enfoque utiliza una función de pérdida modificada para estimar los coeficientes de regresión. Dicha función combina la suma de errores cuadráticos para valores pequeños de error, y una pérdida lineal para valores grandes de error, lo que le permite ser menos sensible a los valores atípicos.
+
 ```{r}
+# Código 18: Ajuste de regresión Huber, ejercicio 3c
 set.seed(123)
 
 # Data import
@@ -1064,12 +1050,25 @@ results_table <- data.frame(
   Value = c(length(variables), train_r2, train_r2_adj, train_rmse, test_rmse)
 )
 
-# Print the result table
-print(results_table)
+# Format the table using kable()
+library(knitr)
+formatted_table <- kable(results_table, align = "c", col.names = c("Metric", "Value"), format = "pandoc")
+
+# Print the formatted table
+formatted_table
+
 cat("Variables usadas en el modelo: ")
 cat(variables, sep=", ")
 ```
 
+Al aplicar la regresión Huber en nuestro estudio, no se observa una mejora significativa en las métricas calculadas anteriormente. El valor del RMSE se mantiene alrededor de las 10 unidades, lo cual sugiere que, a pesar de reducir la influencia de los datos atípicos, hay otros factores que impiden que nuestro modelo sea un buen predictor.
+
+Además, el bajo valor de R2 indica que puede haber un problema relacionado con las variables predictoras utilizadas, ya que solo son capaces de explicar aproximadamente el 10% de la variabilidad en la puntuación total de UPDRS. Esto sugiere que podrían existir otras variables o factores no considerados en nuestro modelo que desempeñan un papel importante en la predicción de la puntuación total de UPDRS.
+
+En conclusión, el análisis realizado hasta el momento revela varias limitaciones y desafíos en la construcción de un modelo predictivo para la puntuación total de UPDRS utilizando las medidas de voz como variables predictoras. A pesar de los esfuerzos realizados, los modelos de regresión lineal y otros enfoques explorados han mostrado un mal ajuste y una baja capacidad predictiva.
+
 # ANEXO
+
+### Referencias
 
 ### Código
